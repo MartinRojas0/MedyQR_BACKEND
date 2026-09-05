@@ -3,6 +3,10 @@ package com.mediqr.backend.model;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+
 @Entity
 @Table(name = "usuarios")
 public class Usuario {
@@ -16,15 +20,17 @@ public class Usuario {
     @Column(name = "password_hash")
     private String passwordHash;
 
-    private String rol;
+    private String rol = "PACIENTE";
 
-    private Boolean activo;
+    private Boolean activo = true;
 
-    @Column(name = "created_at")
-    private OffsetDateTime createdAt;
+@CreationTimestamp
+@Column(name = "created_at", nullable = false, updatable = false)
+private OffsetDateTime createdAt;
 
-    @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
+@UpdateTimestamp
+@Column(name = "updated_at", nullable = false)
+private OffsetDateTime updatedAt;
 
     public Usuario() {
     }

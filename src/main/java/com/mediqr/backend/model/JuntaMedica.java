@@ -3,6 +3,9 @@ package com.mediqr.backend.model;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 @Entity
 @Table(name = "juntas_medicas")
 public class JuntaMedica {
@@ -25,12 +28,14 @@ public class JuntaMedica {
     @Column(name = "fecha_expiracion")
     private OffsetDateTime fechaExpiracion;
 
-    private String estado;
+    private String estado = "ACTIVA";
 
-    @Column(name = "created_at")
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
     public JuntaMedica() {

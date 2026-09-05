@@ -1,54 +1,24 @@
-package com.mediqr.backend.model;
+package com.mediqr.backend.dto;
 
-import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+
 import java.time.OffsetDateTime;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+public class ConsultaMedicaCreateRequest {
 
-@Entity
-@Table(name = "consultas_medicas")
-public class ConsultaMedica {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "paciente_id")
+    @NotNull
     private Long pacienteId;
 
-    @Column(name = "personal_id")
+    @NotNull
     private Long personalId;
 
-    @Column(name = "fecha_consulta")
+    @NotNull
     private OffsetDateTime fechaConsulta;
 
     private String motivo;
-
     private String diagnostico;
-
     private String tratamiento;
-
     private String observaciones;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
-    public ConsultaMedica() {
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public Long getPacienteId() {
         return pacienteId;
@@ -104,21 +74,5 @@ public class ConsultaMedica {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }

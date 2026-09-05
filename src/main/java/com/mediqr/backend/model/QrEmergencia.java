@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 @Entity
 @Table(name = "qr_emergencia")
 public class QrEmergencia {
@@ -15,29 +18,31 @@ public class QrEmergencia {
     @Column(name = "paciente_id")
     private Long pacienteId;
 
-    private UUID token;
+    private UUID token = UUID.randomUUID();
 
     @Column(name = "mostrar_dni")
-    private Boolean mostrarDni;
+    private Boolean mostrarDni = true;
 
     @Column(name = "mostrar_tipo_sangre")
-    private Boolean mostrarTipoSangre;
+    private Boolean mostrarTipoSangre = true;
 
     @Column(name = "mostrar_alergias")
-    private Boolean mostrarAlergias;
+    private Boolean mostrarAlergias = true;
 
     @Column(name = "mostrar_medicamentos")
-    private Boolean mostrarMedicamentos;
+    private Boolean mostrarMedicamentos = true;
 
     @Column(name = "mostrar_enfermedades")
-    private Boolean mostrarEnfermedades;
+    private Boolean mostrarEnfermedades = true;
 
-    private Boolean activo;
+    private Boolean activo = true;
 
-    @Column(name = "created_at")
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
     public QrEmergencia() {

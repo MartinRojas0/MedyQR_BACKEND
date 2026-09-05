@@ -1,59 +1,26 @@
-package com.mediqr.backend.model;
+package com.mediqr.backend.dto;
 
-import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+public class PacienteCreateRequest {
 
-@Entity
-@Table(name = "pacientes")
-public class Paciente {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "usuario_id")
+    @NotNull
     private Long usuarioId;
 
+    @NotBlank
     private String nombres;
 
+    @NotBlank
     private String apellidos;
 
-    @Column(name = "documento_identidad")
     private String documentoIdentidad;
-
-    @Column(name = "fecha_nacimiento")
     private LocalDate fechaNacimiento;
-
     private String telefono;
-
     private String direccion;
-
     private String sexo;
-
-    private Boolean activo = true;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
-    public Paciente() {
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public Long getUsuarioId() {
         return usuarioId;
@@ -117,29 +84,5 @@ public class Paciente {
 
     public void setSexo(String sexo) {
         this.sexo = sexo;
-    }
-
-    public Boolean getActivo() {
-        return activo;
-    }
-
-    public void setActivo(Boolean activo) {
-        this.activo = activo;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }

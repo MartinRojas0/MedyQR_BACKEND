@@ -1,7 +1,10 @@
 package com.mediqr.backend.controller;
 
+import com.mediqr.backend.dto.HistorialClinicoCreateRequest;
+import com.mediqr.backend.dto.HistorialClinicoUpdateRequest;
 import com.mediqr.backend.model.HistorialClinico;
 import com.mediqr.backend.service.HistorialClinicoService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,30 +28,23 @@ public class HistorialClinicoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<HistorialClinico> getById(@PathVariable Long id) {
-        return historialClinicoService.findById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.ok(historialClinicoService.getById(id));
     }
 
     @PostMapping
-    public ResponseEntity<HistorialClinico> create(@RequestBody HistorialClinico historialClinico) {
-        HistorialClinico savedHistorialClinico = historialClinicoService.save(historialClinico);
+    public ResponseEntity<HistorialClinico> create(@Valid @RequestBody HistorialClinicoCreateRequest request) {
+        HistorialClinico savedHistorialClinico = historialClinicoService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedHistorialClinico);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<HistorialClinico> update(@PathVariable Long id, @RequestBody HistorialClinico historialClinico) {
-        return historialClinicoService.update(id, historialClinico)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<HistorialClinico> update(@PathVariable Long id,
+                                                   @Valid @RequestBody HistorialClinicoUpdateRequest request) {
+        return ResponseEntity.ok(historialClinicoService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (historialClinicoService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
         historialClinicoService.deleteById(id);
         return ResponseEntity.noContent().build();
     }
