@@ -1,7 +1,10 @@
 package com.mediqr.backend.controller;
 
-import com.mediqr.backend.model.Usuario;
+import com.mediqr.backend.dto.UsuarioCreateRequest;
+import com.mediqr.backend.dto.UsuarioResponse;
+import com.mediqr.backend.dto.UsuarioUpdateRequest;
 import com.mediqr.backend.service.UsuarioService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,26 +22,26 @@ public class UsuarioController {
     }
 
     @GetMapping
-    public List<Usuario> getAll() {
+    public List<UsuarioResponse> getAll() {
         return usuarioService.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Usuario> getById(@PathVariable Long id) {
+    public ResponseEntity<UsuarioResponse> getById(@PathVariable Long id) {
         return usuarioService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Usuario> create(@RequestBody Usuario usuario) {
-        Usuario savedUsuario = usuarioService.save(usuario);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedUsuario);
+    public ResponseEntity<UsuarioResponse> create(@Valid @RequestBody UsuarioCreateRequest request) {
+        UsuarioResponse saved = usuarioService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> update(@PathVariable Long id, @RequestBody Usuario usuario) {
-        return usuarioService.update(id, usuario)
+    public ResponseEntity<UsuarioResponse> update(@PathVariable Long id, @Valid @RequestBody UsuarioUpdateRequest request) {
+        return usuarioService.update(id, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

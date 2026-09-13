@@ -1,39 +1,26 @@
-package com.mediqr.backend.model;
+package com.mediqr.backend.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+public class UsuarioResponse {
 
-
-@Entity
-@Table(name = "usuarios")
-public class Usuario {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String email;
-
-    @Column(name = "password_hash")
-    private String passwordHash;
-
-    private String rol = "PACIENTE";
-
-    private Boolean activo = true;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    private String rol;
+    private Boolean activo;
     private OffsetDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public Usuario() {
+    public UsuarioResponse() {
+    }
+
+    public UsuarioResponse(Long id, String email, String rol, Boolean activo, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        this.id = id;
+        this.email = email;
+        this.rol = rol;
+        this.activo = activo;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public Long getId() {
@@ -50,15 +37,6 @@ public class Usuario {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    @JsonIgnore
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
     }
 
     public String getRol() {
