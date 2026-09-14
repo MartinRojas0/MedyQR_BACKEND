@@ -7,6 +7,8 @@ import com.mediqr.backend.model.ConsultaMedica;
 import com.mediqr.backend.repository.ConsultaMedicaRepository;
 import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.repository.PersonalSaludRepository;
+import com.mediqr.backend.security.CurrentUserService;
+import com.mediqr.backend.service.RegistroAccesoService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,13 +20,19 @@ public class ConsultaMedicaService {
     private final ConsultaMedicaRepository consultaMedicaRepository;
     private final PacienteRepository pacienteRepository;
     private final PersonalSaludRepository personalSaludRepository;
+    private final RegistroAccesoService registroAccesoService;
+    private final CurrentUserService currentUserService;
 
     public ConsultaMedicaService(ConsultaMedicaRepository consultaMedicaRepository,
-                                PacienteRepository pacienteRepository,
-                                PersonalSaludRepository personalSaludRepository) {
+                                 PacienteRepository pacienteRepository,
+                                 PersonalSaludRepository personalSaludRepository,
+                                 RegistroAccesoService registroAccesoService,
+                                 CurrentUserService currentUserService) {
         this.consultaMedicaRepository = consultaMedicaRepository;
         this.pacienteRepository = pacienteRepository;
         this.personalSaludRepository = personalSaludRepository;
+        this.registroAccesoService = registroAccesoService;
+        this.currentUserService = currentUserService;
     }
 
     public List<ConsultaMedica> findAll() {
@@ -36,8 +44,12 @@ public class ConsultaMedicaService {
     }
 
     public ConsultaMedica getById(Long id) {
-        return consultaMedicaRepository.findById(id)
+        ConsultaMedica consulta = consultaMedicaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Consulta médica no encontrada"));
+
+        registrarAcceso(consulta.getPacienteId(), "CONSULTA_MEDICA", "LECTURA_CONSULTA");
+
+        return consulta;
     }
 
     public ConsultaMedica create(ConsultaMedicaCreateRequest request) {
@@ -51,7 +63,12 @@ public class ConsultaMedicaService {
         consultaMedica.setDiagnostico(request.getDiagnostico());
         consultaMedica.setTratamiento(request.getTratamiento());
         consultaMedica.setObservaciones(request.getObservaciones());
-        return consultaMedicaRepository.save(consultaMedica);
+        
+        ConsultaMedica saved = consultaMedicaRepository.save(consultaMedica);
+        
+        registrarAcceso(saved.getPacienteId(), "CONSULTA_MEDICA", "CREACION_CONSULTA");
+
+        return saved;
     }
 
     public ConsultaMedica update(Long id, ConsultaMedicaUpdateRequest request) {
@@ -60,12 +77,20 @@ public class ConsultaMedicaService {
         consultaMedica.setDiagnostico(request.getDiagnostico());
         consultaMedica.setTratamiento(request.getTratamiento());
         consultaMedica.setObservaciones(request.getObservaciones());
-        return consultaMedicaRepository.save(consultaMedica);
+        
+        ConsultaMedica saved = consultaMedicaRepository.save(consultaMedica);
+        
+        registrarAcceso(saved.getPacienteId(), "CONSULTA_MEDICA", "ACTUALIZACION_CONSULTA");
+
+        return saved;
     }
 
     public void deleteById(Long id) {
-        getById(id);
+        ConsultaMedica consulta = getById(id);
+        Long pacienteId = consulta.getPacienteId();
         consultaMedicaRepository.deleteById(id);
+        
+        registrarAcceso(pacienteId, "CONSULTA_MEDICA", "ELIMINACION_CONSULTA");
     }
 
     private void validateReferences(Long pacienteId, Long personalId) {
@@ -74,6 +99,13 @@ public class ConsultaMedicaService {
         }
         if (!personalSaludRepository.existsById(personalId)) {
             throw new ResourceNotFoundException("Personal de salud no encontrado");
+        }
+    }
+
+    private void registrarAcceso(Long pacienteId, String tipoAcceso, String accion) {
+        var currentUser = currentUserService.getCurrentUser();
+        if (currentUser != null) {
+            registroAccesoService.registrarAcceso(currentUser, pacienteId, tipoAcceso, accion, null);
         }
     }
 }

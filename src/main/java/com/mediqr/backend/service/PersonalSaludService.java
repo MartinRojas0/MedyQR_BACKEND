@@ -38,4 +38,8 @@ public class PersonalSaludService {
     public void deleteById(Long id) {
         personalSaludRepository.deleteById(id);
     }
+
+    public Optional<PersonalSalud> findByUsuarioId(Long usuarioId) {
+        return personalSaludRepository.findByUsuarioId(usuarioId);
+    }
 }

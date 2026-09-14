@@ -32,11 +32,15 @@ public class UsuarioService {
         return usuarioRepository.findById(id).map(this::toResponse);
     }
 
+    public Optional<Usuario> findByEmail(String email) {
+        return usuarioRepository.findByEmail(email);
+    }
+
     public UsuarioResponse create(UsuarioCreateRequest request) {
         Usuario usuario = new Usuario();
         usuario.setEmail(request.getEmail());
         usuario.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        usuario.setRol(request.getRol() != null ? request.getRol() : "PACIENTE");
+        usuario.setRol("PACIENTE");
         usuario.setActivo(true);
         Usuario saved = usuarioRepository.save(usuario);
         return toResponse(saved);

@@ -7,6 +7,8 @@ import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.QrEmergencia;
 import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.repository.QrEmergenciaRepository;
+import com.mediqr.backend.security.CurrentUserService;
+import com.mediqr.backend.service.RegistroAccesoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,11 +35,17 @@ class QrEmergenciaServiceTest {
     @Mock
     private PacienteRepository pacienteRepository;
 
+    @Mock
+    private RegistroAccesoService registroAccesoService;
+
+    @Mock
+    private CurrentUserService currentUserService;
+
     private QrEmergenciaService qrService;
 
     @BeforeEach
     void setUp() {
-        qrService = new QrEmergenciaService(qrRepository, pacienteRepository);
+        qrService = new QrEmergenciaService(qrRepository, pacienteRepository, registroAccesoService, currentUserService);
     }
 
     @Test
