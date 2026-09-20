@@ -63,4 +63,20 @@ public class AccessControlServiceImpl implements AccessControlService {
         // Cualquier otro rol: denegar
         return false;
     }
+
+    @Override
+    public boolean canAccessUser(CurrentUserService.CurrentUser currentUser, Long usuarioId) {
+        if (currentUser == null || usuarioId == null) {
+            return false;
+        }
+
+        // PACIENTE: solo puede acceder a su propio usuario
+        if ("PACIENTE".equals(currentUser.rol())) {
+            return currentUser.userId().equals(usuarioId);
+        }
+
+        // PERSONAL_SALUD: no puede acceder a usuarios (solo a pacientes)
+        // En el futuro se podría permitir si tiene autorización, por ahora denegamos
+        return false;
+    }
 }

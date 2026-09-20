@@ -5,4 +5,6 @@ import com.mediqr.backend.security.CurrentUserService;
 public interface AccessControlService {
 
     boolean canAccessPatient(CurrentUserService.CurrentUser currentUser, Long pacienteId);
+
+    boolean canAccessUser(CurrentUserService.CurrentUser currentUser, Long usuarioId);
 }

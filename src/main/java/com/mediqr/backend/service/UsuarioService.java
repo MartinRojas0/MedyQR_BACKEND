@@ -32,6 +32,10 @@ public class UsuarioService {
         return usuarioRepository.findById(id).map(this::toResponse);
     }
 
+    public Optional<Usuario> findByIdUsuario(Long id) {
+        return usuarioRepository.findById(id);
+    }
+
     public Optional<Usuario> findByEmail(String email) {
         return usuarioRepository.findByEmail(email);
     }
@@ -54,12 +58,7 @@ public class UsuarioService {
             if (request.getPassword() != null && !request.getPassword().isBlank()) {
                 existing.setPasswordHash(passwordEncoder.encode(request.getPassword()));
             }
-            if (request.getRol() != null) {
-                existing.setRol(request.getRol());
-            }
-            if (request.getActivo() != null) {
-                existing.setActivo(request.getActivo());
-            }
+            // Role is not updatable - always keep as is (PACIENTE)
             return toResponse(usuarioRepository.save(existing));
         });
     }
