@@ -2,6 +2,7 @@ package com.mediqr.backend.service;
 
 import com.mediqr.backend.dto.PacienteCreateRequest;
 import com.mediqr.backend.dto.PacienteUpdateRequest;
+import com.mediqr.backend.exception.BusinessRuleException;
 import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.Paciente;
 import com.mediqr.backend.repository.PacienteRepository;
@@ -39,10 +40,18 @@ public class PacienteService {
         if (!usuarioRepository.existsById(request.getUsuarioId())) {
             throw new ResourceNotFoundException("No existe un usuario con el ID indicado");
         }
+        if (pacienteRepository.existsByUsuarioId(request.getUsuarioId())) {
+        throw new BusinessRuleException("El usuario ya tiene un paciente asociado");
+    }
+    String documento = normalize(request.getDocumentoIdentidad());
+    if (documento != null && pacienteRepository.existsByDocumentoIdentidad(documento)) {
+        throw new BusinessRuleException("Ya existe un paciente con ese documento de identidad");
+    }
 
         Paciente paciente = new Paciente();
         paciente.setUsuarioId(request.getUsuarioId());
-        paciente.setNombres(request.getNombres());
+        paciente.setNombres(request.getNombres().trim());      // antes: sin trim
+        paciente.setDocumentoIdentidad(documento);    //nuevo         
         paciente.setApellidos(request.getApellidos());
         paciente.setDocumentoIdentidad(request.getDocumentoIdentidad());
         paciente.setFechaNacimiento(request.getFechaNacimiento());
@@ -54,6 +63,11 @@ public class PacienteService {
 
     public Paciente update(Long id, PacienteUpdateRequest request) {
         Paciente paciente = getById(id);
+    String documento = normalize(request.getDocumentoIdentidad());
+    if (documento != null && pacienteRepository.existsByDocumentoIdentidadAndIdNot(documento, id)) {
+        throw new BusinessRuleException("Ya existe un paciente con ese documento de identidad");
+    }//validacion de documento de identidad
+        
         paciente.setNombres(request.getNombres());
         paciente.setApellidos(request.getApellidos());
         paciente.setDocumentoIdentidad(request.getDocumentoIdentidad());
@@ -68,4 +82,8 @@ public class PacienteService {
         getById(id);
         pacienteRepository.deleteById(id);
     }
+    private String normalize(String value) {
+    if (value == null || value.isBlank()) return null;
+    return value.trim();
+}
 }
