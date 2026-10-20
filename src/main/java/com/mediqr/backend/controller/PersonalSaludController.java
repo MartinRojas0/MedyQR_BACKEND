@@ -1,7 +1,10 @@
 package com.mediqr.backend.controller;
 
+import com.mediqr.backend.dto.PersonalSaludCreateRequest;
+import com.mediqr.backend.dto.PersonalSaludUpdateRequest;
 import com.mediqr.backend.model.PersonalSalud;
 import com.mediqr.backend.service.PersonalSaludService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,30 +28,22 @@ public class PersonalSaludController {
 
     @GetMapping("/{id}")
     public ResponseEntity<PersonalSalud> getById(@PathVariable Long id) {
-        return personalSaludService.findById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.ok(personalSaludService.getById(id));
     }
 
     @PostMapping
-    public ResponseEntity<PersonalSalud> create(@RequestBody PersonalSalud personalSalud) {
-        PersonalSalud savedPersonalSalud = personalSaludService.save(personalSalud);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedPersonalSalud);
+    public ResponseEntity<PersonalSalud> create(@Valid @RequestBody PersonalSaludCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(personalSaludService.create(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PersonalSalud> update(@PathVariable Long id, @RequestBody PersonalSalud personalSalud) {
-        return personalSaludService.update(id, personalSalud)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<PersonalSalud> update(@PathVariable Long id,
+                                                @Valid @RequestBody PersonalSaludUpdateRequest request) {
+        return ResponseEntity.ok(personalSaludService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (personalSaludService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
         personalSaludService.deleteById(id);
         return ResponseEntity.noContent().build();
     }

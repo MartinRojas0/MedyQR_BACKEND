@@ -66,7 +66,7 @@ public class PacienteService {
     String documento = normalize(request.getDocumentoIdentidad());
     if (documento != null && pacienteRepository.existsByDocumentoIdentidadAndIdNot(documento, id)) {
         throw new BusinessRuleException("Ya existe un paciente con ese documento de identidad");
-    }//validacion de documento de identidad
+    }//validation of documentoIdentidad 
         
         paciente.setNombres(request.getNombres());
         paciente.setApellidos(request.getApellidos());
