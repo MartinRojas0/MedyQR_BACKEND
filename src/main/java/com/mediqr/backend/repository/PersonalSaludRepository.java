@@ -6,5 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface PersonalSaludRepository extends JpaRepository<PersonalSalud, Long> {
+    boolean existsByUsuarioId(Long usuarioId);
+    boolean existsByDocumentoIdentidad(String documentoIdentidad);
+    boolean existsByDocumentoIdentidadAndIdNot(String documentoIdentidad, Long id);
+    boolean existsByRegistroProfesional(String registroProfesional);
+    boolean existsByRegistroProfesionalAndIdNot(String registroProfesional, Long id);
     Optional<PersonalSalud> findByUsuarioId(Long usuarioId);
 }

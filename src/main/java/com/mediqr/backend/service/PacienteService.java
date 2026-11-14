@@ -2,13 +2,13 @@ package com.mediqr.backend.service;
 
 import com.mediqr.backend.dto.PacienteCreateRequest;
 import com.mediqr.backend.dto.PacienteUpdateRequest;
+import com.mediqr.backend.exception.BusinessRuleException;
 import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.Paciente;
 import com.mediqr.backend.model.Usuario;
 import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.repository.UsuarioRepository;
 import com.mediqr.backend.security.CurrentUserService;
-import com.mediqr.backend.service.RegistroAccesoService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -54,12 +54,19 @@ public class PacienteService {
         if (!"PACIENTE".equals(usuario.getRol())) {
             throw new IllegalArgumentException("El usuario debe tener rol PACIENTE para crear un perfil de paciente");
         }
+        if (pacienteRepository.existsByUsuarioId(request.getUsuarioId())) {
+            throw new BusinessRuleException("El usuario ya tiene un paciente asociado");
+        }
+        String documento = normalize(request.getDocumentoIdentidad());
+        if (documento != null && pacienteRepository.existsByDocumentoIdentidad(documento)) {
+            throw new BusinessRuleException("Ya existe un paciente con ese documento de identidad");
+        }
 
         Paciente paciente = new Paciente();
         paciente.setUsuarioId(request.getUsuarioId());
-        paciente.setNombres(request.getNombres());
+        paciente.setNombres(request.getNombres() == null ? null : request.getNombres().trim());
         paciente.setApellidos(request.getApellidos());
-        paciente.setDocumentoIdentidad(request.getDocumentoIdentidad());
+        paciente.setDocumentoIdentidad(documento);
         paciente.setFechaNacimiento(request.getFechaNacimiento());
         paciente.setTelefono(request.getTelefono());
         paciente.setDireccion(request.getDireccion());
@@ -77,9 +84,14 @@ public class PacienteService {
 
     public Paciente update(Long id, PacienteUpdateRequest request) {
         Paciente paciente = getById(id);
+        String documento = normalize(request.getDocumentoIdentidad());
+        if (documento != null && pacienteRepository.existsByDocumentoIdentidadAndIdNot(documento, id)) {
+            throw new BusinessRuleException("Ya existe un paciente con ese documento de identidad");
+        }
+
         paciente.setNombres(request.getNombres());
         paciente.setApellidos(request.getApellidos());
-        paciente.setDocumentoIdentidad(request.getDocumentoIdentidad());
+        paciente.setDocumentoIdentidad(documento);
         paciente.setFechaNacimiento(request.getFechaNacimiento());
         paciente.setTelefono(request.getTelefono());
         paciente.setDireccion(request.getDireccion());
@@ -97,5 +109,12 @@ public class PacienteService {
         if (currentUser != null) {
             registroAccesoService.registrarAcceso(currentUser, pacienteId, tipoAcceso, accion, null);
         }
+    }
+
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

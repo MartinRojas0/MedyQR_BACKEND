@@ -1,6 +1,7 @@
 package com.mediqr.backend.service;
 
 import com.mediqr.backend.dto.PacienteCreateRequest;
+import com.mediqr.backend.exception.BusinessRuleException;
 import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.Paciente;
 import com.mediqr.backend.model.Usuario;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,6 +69,41 @@ class PacienteServiceTest {
         assertEquals(10L, result.getId());
         assertEquals(1L, result.getUsuarioId());
         verify(pacienteRepository).save(any(Paciente.class));
+    }
+
+    @Test
+    void createRejectsDuplicatePatientProfile() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        usuario.setRol("PACIENTE");
+
+        PacienteCreateRequest request = new PacienteCreateRequest();
+        request.setUsuarioId(1L);
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(pacienteRepository.existsByUsuarioId(1L)).thenReturn(true);
+
+        assertThrows(BusinessRuleException.class, () -> pacienteService.create(request));
+
+        verify(pacienteRepository, never()).save(any(Paciente.class));
+    }
+
+    @Test
+    void createRejectsDuplicateNormalizedIdentityDocument() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        usuario.setRol("PACIENTE");
+
+        PacienteCreateRequest request = new PacienteCreateRequest();
+        request.setUsuarioId(1L);
+        request.setDocumentoIdentidad("  12345678  ");
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(pacienteRepository.existsByDocumentoIdentidad("12345678")).thenReturn(true);
+
+        assertThrows(BusinessRuleException.class, () -> pacienteService.create(request));
+
+        verify(pacienteRepository, never()).save(any(Paciente.class));
     }
 
     @Test

@@ -44,17 +44,17 @@ public class UsuarioService {
     }
 
     public Optional<Usuario> findByEmail(String email) {
-        return usuarioRepository.findByEmail(email);
+        return usuarioRepository.findByEmailIgnoreCase(email);
     }
 
     @Transactional
     public UsuarioResponse create(UsuarioCreateRequest request) {
-        if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (usuarioRepository.existsByEmailIgnoreCase(request.getEmail().trim())) {
             throw new BusinessRuleException("Ya existe una cuenta con ese correo electrónico");
         }
 
         Usuario usuario = new Usuario();
-        usuario.setEmail(request.getEmail());
+        usuario.setEmail(request.getEmail().trim());
         usuario.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         usuario.setRol("PACIENTE");
         usuario.setActivo(true);
@@ -69,15 +69,22 @@ public class UsuarioService {
         return toResponse(saved);
     }
 
+    @Transactional
     public Optional<UsuarioResponse> update(Long id, UsuarioUpdateRequest request) {
         return usuarioRepository.findById(id).map(existing -> {
-            if (request.getEmail() != null) {
-                existing.setEmail(request.getEmail());
+            if (request.getEmail() != null && !request.getEmail().isBlank()) {
+                String email = request.getEmail().trim();
+                if (usuarioRepository.existsByEmailIgnoreCaseAndIdNot(email, id)) {
+                    throw new BusinessRuleException("Ya existe una cuenta con ese correo electrónico");
+                }
+                existing.setEmail(email);
             }
             if (request.getPassword() != null && !request.getPassword().isBlank()) {
                 existing.setPasswordHash(passwordEncoder.encode(request.getPassword()));
             }
-            // Role is not updatable - always keep as is (PACIENTE)
+            if (request.getActivo() != null) {
+                existing.setActivo(request.getActivo());
+            }
             return toResponse(usuarioRepository.save(existing));
         });
     }

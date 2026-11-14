@@ -2,7 +2,7 @@ package com.mediqr.backend.service;
 
 import com.mediqr.backend.dto.UsuarioCreateRequest;
 import com.mediqr.backend.dto.UsuarioResponse;
-import com.mediqr.backend.exception.ResourceNotFoundException;
+import com.mediqr.backend.dto.UsuarioUpdateRequest;
 import com.mediqr.backend.model.Paciente;
 import com.mediqr.backend.model.Usuario;
 import com.mediqr.backend.repository.PacienteRepository;
@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -58,7 +59,7 @@ class UsuarioServiceTest {
         UsuarioResponse response = usuarioService.create(request);
 
         assertEquals("PACIENTE", response.getRol());
-        verify(usuarioRepository).findByEmail("test@test.com");
+        verify(usuarioRepository).existsByEmailIgnoreCase("test@test.com");
         verify(usuarioRepository).save(any(Usuario.class));
         verify(pacienteRepository).save(org.mockito.ArgumentMatchers.argThat(
                 paciente -> Long.valueOf(1L).equals(paciente.getUsuarioId()) &&
@@ -70,13 +71,50 @@ class UsuarioServiceTest {
         UsuarioCreateRequest request = new UsuarioCreateRequest();
         request.setEmail("test@test.com");
         request.setPassword("secret123");
-        when(usuarioRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(new Usuario()));
+        when(usuarioRepository.existsByEmailIgnoreCase(request.getEmail())).thenReturn(true);
 
         assertThrows(com.mediqr.backend.exception.BusinessRuleException.class,
                 () -> usuarioService.create(request));
 
         verify(usuarioRepository, never()).save(any(Usuario.class));
         verifyNoInteractions(pacienteRepository);
+    }
+
+    @Test
+    void updateRejectsEmailUsedByAnotherUser() {
+        Usuario existing = new Usuario();
+        existing.setId(1L);
+        existing.setEmail("current@example.com");
+        UsuarioUpdateRequest request = new UsuarioUpdateRequest();
+        request.setEmail("other@example.com");
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(usuarioRepository.existsByEmailIgnoreCaseAndIdNot("other@example.com", 1L)).thenReturn(true);
+
+        assertThrows(com.mediqr.backend.exception.BusinessRuleException.class,
+                () -> usuarioService.update(1L, request));
+
+        verify(usuarioRepository, never()).save(any(Usuario.class));
+    }
+
+    @Test
+    void updateDoesNotAllowChangingRoleAndPreservesAccountStateUpdates() {
+        Usuario existing = new Usuario();
+        existing.setId(1L);
+        existing.setEmail("patient@example.com");
+        existing.setRol("PACIENTE");
+        existing.setActivo(true);
+        UsuarioUpdateRequest request = new UsuarioUpdateRequest();
+        request.setRol("PERSONAL_SALUD");
+        request.setActivo(false);
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(usuarioRepository.save(existing)).thenReturn(existing);
+
+        UsuarioResponse response = usuarioService.update(1L, request).orElseThrow();
+
+        assertEquals("PACIENTE", response.getRol());
+        assertFalse(response.getActivo());
     }
 
     @Test

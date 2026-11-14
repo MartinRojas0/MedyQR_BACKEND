@@ -29,7 +29,7 @@ public class UsuarioController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessUser(authentication, #id)")
+    @PreAuthorize("@accessControl.canAccessUser(@currentUserService.getCurrentUser(), #id)")
     public ResponseEntity<UsuarioResponse> getById(@PathVariable Long id) {
         return usuarioService.findById(id)
                 .map(ResponseEntity::ok)
@@ -43,7 +43,7 @@ public class UsuarioController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessUser(authentication, #id)")
+    @PreAuthorize("@accessControl.canAccessUser(@currentUserService.getCurrentUser(), #id)")
     public ResponseEntity<UsuarioResponse> update(@PathVariable Long id,
                                                    @Valid @RequestBody UsuarioUpdateRequest request) {
         return usuarioService.update(id, request)
@@ -52,7 +52,7 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessUser(authentication, #id)")
+    @PreAuthorize("@accessControl.canAccessUser(@currentUserService.getCurrentUser(), #id)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (usuarioService.findById(id).isEmpty()) {
             return ResponseEntity.notFound().build();
