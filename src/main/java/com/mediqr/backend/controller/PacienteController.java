@@ -29,7 +29,7 @@ public class PacienteController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #id)")
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #id)")
     public ResponseEntity<Paciente> getById(@PathVariable Long id) {
         return ResponseEntity.ok(pacienteService.getById(id));
     }
@@ -42,14 +42,14 @@ public class PacienteController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #id)")
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #id)")
     public ResponseEntity<Paciente> update(@PathVariable Long id,
                                            @Valid @RequestBody PacienteUpdateRequest request) {
         return ResponseEntity.ok(pacienteService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #id)")
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #id)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         pacienteService.deleteById(id);
         return ResponseEntity.noContent().build();
