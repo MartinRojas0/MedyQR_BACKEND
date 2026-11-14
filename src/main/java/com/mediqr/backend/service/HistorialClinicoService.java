@@ -40,6 +40,32 @@ public class HistorialClinicoService {
         return historialClinicoRepository.findById(id);
     }
 
+    public Optional<HistorialClinico> findByPacienteId(Long pacienteId) {
+        Optional<HistorialClinico> historial = historialClinicoRepository.findByPacienteId(pacienteId);
+        historial.ifPresent(h -> registrarAcceso(h.getPacienteId(), "HISTORIAL_CLINICO", "LECTURA_HISTORIAL"));
+        return historial;
+    }
+
+    public HistorialClinico upsertForPaciente(Long pacienteId, HistorialClinicoUpdateRequest request) {
+        if (!pacienteRepository.existsById(pacienteId)) {
+            throw new ResourceNotFoundException("Paciente no encontrado");
+        }
+
+        Optional<HistorialClinico> existente = historialClinicoRepository.findByPacienteId(pacienteId);
+        HistorialClinico historial = existente.orElseGet(HistorialClinico::new);
+        historial.setPacienteId(pacienteId);
+        historial.setTipoSangre(request.getTipoSangre());
+        historial.setAlergias(request.getAlergias());
+        historial.setEnfermedadesCronicas(request.getEnfermedadesCronicas());
+        historial.setCirugias(request.getCirugias());
+        historial.setObservaciones(request.getObservaciones());
+
+        HistorialClinico guardado = historialClinicoRepository.save(historial);
+        registrarAcceso(pacienteId, "HISTORIAL_CLINICO",
+                existente.isPresent() ? "ACTUALIZACION_HISTORIAL" : "CREACION_HISTORIAL");
+        return guardado;
+    }
+
     public HistorialClinico getById(Long id) {
         HistorialClinico historial = historialClinicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Historial clínico no encontrado"));

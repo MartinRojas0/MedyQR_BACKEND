@@ -3,10 +3,14 @@ package com.mediqr.backend.service;
 import com.mediqr.backend.dto.UsuarioCreateRequest;
 import com.mediqr.backend.dto.UsuarioResponse;
 import com.mediqr.backend.dto.UsuarioUpdateRequest;
+import com.mediqr.backend.exception.BusinessRuleException;
+import com.mediqr.backend.model.Paciente;
 import com.mediqr.backend.model.Usuario;
+import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,10 +19,13 @@ import java.util.Optional;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final PacienteRepository pacienteRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
+    public UsuarioService(UsuarioRepository usuarioRepository, PacienteRepository pacienteRepository,
+                          PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
+        this.pacienteRepository = pacienteRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -40,13 +47,23 @@ public class UsuarioService {
         return usuarioRepository.findByEmail(email);
     }
 
+    @Transactional
     public UsuarioResponse create(UsuarioCreateRequest request) {
+        if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new BusinessRuleException("Ya existe una cuenta con ese correo electrónico");
+        }
+
         Usuario usuario = new Usuario();
         usuario.setEmail(request.getEmail());
         usuario.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         usuario.setRol("PACIENTE");
         usuario.setActivo(true);
         Usuario saved = usuarioRepository.save(usuario);
+
+        Paciente paciente = new Paciente();
+        paciente.setUsuarioId(saved.getId());
+        pacienteRepository.save(paciente);
+
         return toResponse(saved);
     }
 
