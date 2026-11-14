@@ -24,9 +24,10 @@ $rng.Dispose()
 [Convert]::ToBase64String($bytes)
 ```
 
-Keep `spring.jpa.hibernate.ddl-auto=validate`. The application validates the
-existing schema and does not create migrations or alter Neon tables. `/api/health`
-must return `{"status":"ok"}` before using the API.
+Keep `spring.jpa.hibernate.ddl-auto=none`. Hibernate must not create, update,
+or validate the existing Neon schema during startup. The application does not
+run migrations or alter Neon tables. `/api/health` must return
+`{"status":"ok"}` before using the API.
 
 The patient MVP exposes registration, login, and the authenticated patient's
 own profile/history. Other medical modules remain outside this deployment
