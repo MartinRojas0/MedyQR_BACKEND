@@ -62,6 +62,8 @@ public class UsuarioService {
 
         Paciente paciente = new Paciente();
         paciente.setUsuarioId(saved.getId());
+        paciente.setNombres("");
+        paciente.setApellidos("");
         pacienteRepository.save(paciente);
 
         return toResponse(saved);

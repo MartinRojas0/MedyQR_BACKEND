@@ -61,7 +61,8 @@ class UsuarioServiceTest {
         verify(usuarioRepository).findByEmail("test@test.com");
         verify(usuarioRepository).save(any(Usuario.class));
         verify(pacienteRepository).save(org.mockito.ArgumentMatchers.argThat(
-                paciente -> Long.valueOf(1L).equals(paciente.getUsuarioId())));
+                paciente -> Long.valueOf(1L).equals(paciente.getUsuarioId()) &&
+                        "".equals(paciente.getNombres()) && "".equals(paciente.getApellidos())));
     }
 
     @Test
