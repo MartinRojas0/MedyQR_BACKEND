@@ -24,9 +24,12 @@ $rng.Dispose()
 [Convert]::ToBase64String($bytes)
 ```
 
-Keep `spring.jpa.hibernate.ddl-auto=none`. Hibernate must not create, update,
-or validate the existing Neon schema during startup. The application does not
-run migrations or alter Neon tables. `/api/health` must return
+Keep `spring.jpa.hibernate.ddl-auto=none`. At startup, `schema.sql` uses
+`CREATE TABLE IF NOT EXISTS` for the MVP tables `usuarios`, `pacientes`,
+`historial_clinico`, and `registro_accesos`. It creates missing tables only; it
+does not alter existing tables or delete data. Hibernate does not create,
+update, or validate the broader Neon schema. Existing tables with incompatible
+columns must be reviewed separately. `/api/health` must return
 `{"status":"ok"}` before using the API.
 
 The patient MVP exposes registration, login, and the authenticated patient's
