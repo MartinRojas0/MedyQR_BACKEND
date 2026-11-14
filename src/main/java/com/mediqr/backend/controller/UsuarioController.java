@@ -23,7 +23,7 @@ public class UsuarioController {
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('PERSONAL_SALUD')")
     public List<UsuarioResponse> getAll() {
         return usuarioService.findAll();
     }

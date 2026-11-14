@@ -27,6 +27,7 @@ public class QrEmergenciaController {
     }
 
     @GetMapping("/emergency/{token}")
+    @PreAuthorize("hasRole('PERSONAL_SALUD')")
     public ResponseEntity<QrEmergenciaEmergencyResponse> accessByToken(@PathVariable UUID token) {
         try {
             QrEmergenciaEmergencyResponse response = qrEmergenciaService.accessByToken(token);

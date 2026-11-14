@@ -35,6 +35,7 @@ public class PacienteController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('PERSONAL_SALUD')")
     public ResponseEntity<Paciente> create(@Valid @RequestBody PacienteCreateRequest request) {
         Paciente savedPaciente = pacienteService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedPaciente);
