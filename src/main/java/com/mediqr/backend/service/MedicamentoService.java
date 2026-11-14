@@ -7,6 +7,8 @@ import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.Medicamento;
 import com.mediqr.backend.repository.MedicamentoRepository;
 import com.mediqr.backend.repository.PacienteRepository;
+import com.mediqr.backend.security.CurrentUserService;
+import com.mediqr.backend.service.RegistroAccesoService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -18,11 +20,17 @@ public class MedicamentoService {
 
     private final MedicamentoRepository medicamentoRepository;
     private final PacienteRepository pacienteRepository;
+    private final RegistroAccesoService registroAccesoService;
+    private final CurrentUserService currentUserService;
 
     public MedicamentoService(MedicamentoRepository medicamentoRepository,
-                              PacienteRepository pacienteRepository) {
+                               PacienteRepository pacienteRepository,
+                               RegistroAccesoService registroAccesoService,
+                               CurrentUserService currentUserService) {
         this.medicamentoRepository = medicamentoRepository;
         this.pacienteRepository = pacienteRepository;
+        this.registroAccesoService = registroAccesoService;
+        this.currentUserService = currentUserService;
     }
 
     public List<Medicamento> findAll() {
@@ -35,12 +43,23 @@ public class MedicamentoService {
 
     public List<Medicamento> findByPacienteId(Long pacienteId) {
         validatePatient(pacienteId);
-        return medicamentoRepository.findByPacienteId(pacienteId);
+        
+        List<Medicamento> medicamentos = medicamentoRepository.findByPacienteId(pacienteId);
+        
+        if (!medicamentos.isEmpty()) {
+            registrarAcceso(pacienteId, "MEDICAMENTO", "LECTURA_LISTA_MEDICAMENTOS");
+        }
+
+        return medicamentos;
     }
 
     public Medicamento getById(Long id) {
-        return medicamentoRepository.findById(id)
+        Medicamento medicamento = medicamentoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Medicamento no encontrado"));
+
+        registrarAcceso(medicamento.getPacienteId(), "MEDICAMENTO", "LECTURA_MEDICAMENTO");
+
+        return medicamento;
     }
 
     public Medicamento create(MedicamentoCreateRequest request) {
@@ -55,7 +74,12 @@ public class MedicamentoService {
         medicamento.setFechaInicio(request.getFechaInicio());
         medicamento.setFechaFin(request.getFechaFin());
         medicamento.setInstrucciones(request.getInstrucciones());
-        return medicamentoRepository.save(medicamento);
+        
+        Medicamento saved = medicamentoRepository.save(medicamento);
+        
+        registrarAcceso(saved.getPacienteId(), "MEDICAMENTO", "CREACION_MEDICAMENTO");
+
+        return saved;
     }
 
     public Medicamento update(Long id, MedicamentoUpdateRequest request) {
@@ -70,12 +94,20 @@ public class MedicamentoService {
         if (request.getActivo() != null) {
             medicamento.setActivo(request.getActivo());
         }
-        return medicamentoRepository.save(medicamento);
+        
+        Medicamento saved = medicamentoRepository.save(medicamento);
+        
+        registrarAcceso(saved.getPacienteId(), "MEDICAMENTO", "ACTUALIZACION_MEDICAMENTO");
+
+        return saved;
     }
 
     public void deleteById(Long id) {
-        getById(id);
+        Medicamento medicamento = getById(id);
+        Long pacienteId = medicamento.getPacienteId();
         medicamentoRepository.deleteById(id);
+        
+        registrarAcceso(pacienteId, "MEDICAMENTO", "ELIMINACION_MEDICAMENTO");
     }
 
     private void validatePatient(Long pacienteId) {
@@ -87,6 +119,13 @@ public class MedicamentoService {
     private void validateDates(LocalDate fechaInicio, LocalDate fechaFin) {
         if (fechaInicio != null && fechaFin != null && fechaFin.isBefore(fechaInicio)) {
             throw new BusinessRuleException("La fecha fin no puede ser anterior a la fecha inicio");
+        }
+    }
+
+    private void registrarAcceso(Long pacienteId, String tipoAcceso, String accion) {
+        var currentUser = currentUserService.getCurrentUser();
+        if (currentUser != null) {
+            registroAccesoService.registrarAcceso(currentUser, pacienteId, tipoAcceso, accion, null);
         }
     }
 }

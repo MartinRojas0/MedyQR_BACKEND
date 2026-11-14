@@ -4,12 +4,14 @@ import com.mediqr.backend.model.PersonalSalud;
 import com.mediqr.backend.service.PersonalSaludService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/personal-salud")
+@PreAuthorize("hasRole('PERSONAL_SALUD')")
 public class PersonalSaludController {
 
     private final PersonalSaludService personalSaludService;
