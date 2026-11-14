@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 
-@Service
+@Service("accessControl")
 public class AccessControlServiceImpl implements AccessControlService {
 
     private final PacienteRepository pacienteRepository;
