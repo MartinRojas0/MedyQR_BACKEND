@@ -7,6 +7,8 @@ import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.HistorialClinico;
 import com.mediqr.backend.repository.HistorialClinicoRepository;
 import com.mediqr.backend.repository.PacienteRepository;
+import com.mediqr.backend.security.CurrentUserService;
+import com.mediqr.backend.service.RegistroAccesoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,12 +33,18 @@ class HistorialClinicoServiceTest {
     @Mock
     private PacienteRepository pacienteRepository;
 
+    @Mock
+    private RegistroAccesoService registroAccesoService;
+
+    @Mock
+    private CurrentUserService currentUserService;
+
     private HistorialClinicoService historialClinicoService;
 
     @BeforeEach
     void setUp() {
         historialClinicoService = new HistorialClinicoService(
-                historialClinicoRepository, pacienteRepository);
+                historialClinicoRepository, pacienteRepository, registroAccesoService, currentUserService);
     }
 
     @Test

@@ -3,10 +3,14 @@ package com.mediqr.backend.service;
 import com.mediqr.backend.dto.UsuarioCreateRequest;
 import com.mediqr.backend.dto.UsuarioResponse;
 import com.mediqr.backend.dto.UsuarioUpdateRequest;
+import com.mediqr.backend.exception.BusinessRuleException;
+import com.mediqr.backend.model.Paciente;
 import com.mediqr.backend.model.Usuario;
+import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,10 +19,13 @@ import java.util.Optional;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final PacienteRepository pacienteRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
+    public UsuarioService(UsuarioRepository usuarioRepository, PacienteRepository pacienteRepository,
+                          PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
+        this.pacienteRepository = pacienteRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -32,26 +39,48 @@ public class UsuarioService {
         return usuarioRepository.findById(id).map(this::toResponse);
     }
 
+    public Optional<Usuario> findByIdUsuario(Long id) {
+        return usuarioRepository.findById(id);
+    }
+
+    public Optional<Usuario> findByEmail(String email) {
+        return usuarioRepository.findByEmailIgnoreCase(email);
+    }
+
+    @Transactional
     public UsuarioResponse create(UsuarioCreateRequest request) {
+        if (usuarioRepository.existsByEmailIgnoreCase(request.getEmail().trim())) {
+            throw new BusinessRuleException("Ya existe una cuenta con ese correo electrónico");
+        }
+
         Usuario usuario = new Usuario();
-        usuario.setEmail(request.getEmail());
+        usuario.setEmail(request.getEmail().trim());
         usuario.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        usuario.setRol(request.getRol() != null ? request.getRol() : "PACIENTE");
+        usuario.setRol("PACIENTE");
         usuario.setActivo(true);
         Usuario saved = usuarioRepository.save(usuario);
+
+        Paciente paciente = new Paciente();
+        paciente.setUsuarioId(saved.getId());
+        paciente.setNombres("");
+        paciente.setApellidos("");
+        pacienteRepository.save(paciente);
+
         return toResponse(saved);
     }
 
+    @Transactional
     public Optional<UsuarioResponse> update(Long id, UsuarioUpdateRequest request) {
         return usuarioRepository.findById(id).map(existing -> {
-            if (request.getEmail() != null) {
-                existing.setEmail(request.getEmail());
+            if (request.getEmail() != null && !request.getEmail().isBlank()) {
+                String email = request.getEmail().trim();
+                if (usuarioRepository.existsByEmailIgnoreCaseAndIdNot(email, id)) {
+                    throw new BusinessRuleException("Ya existe una cuenta con ese correo electrónico");
+                }
+                existing.setEmail(email);
             }
             if (request.getPassword() != null && !request.getPassword().isBlank()) {
                 existing.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-            }
-            if (request.getRol() != null) {
-                existing.setRol(request.getRol());
             }
             if (request.getActivo() != null) {
                 existing.setActivo(request.getActivo());
