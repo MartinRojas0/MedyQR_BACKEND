@@ -7,8 +7,6 @@ import com.mediqr.backend.model.ConsultaMedica;
 import com.mediqr.backend.repository.ConsultaMedicaRepository;
 import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.repository.PersonalSaludRepository;
-import com.mediqr.backend.security.CurrentUserService;
-import com.mediqr.backend.service.RegistroAccesoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,18 +35,12 @@ class ConsultaMedicaServiceTest {
     @Mock
     private PersonalSaludRepository personalSaludRepository;
 
-    @Mock
-    private RegistroAccesoService registroAccesoService;
-
-    @Mock
-    private CurrentUserService currentUserService;
-
     private ConsultaMedicaService consultaMedicaService;
 
     @BeforeEach
     void setUp() {
         consultaMedicaService = new ConsultaMedicaService(
-                consultaMedicaRepository, pacienteRepository, personalSaludRepository, registroAccesoService, currentUserService);
+                consultaMedicaRepository, pacienteRepository, personalSaludRepository);
     }
 
     @Test

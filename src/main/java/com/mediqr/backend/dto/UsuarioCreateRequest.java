@@ -14,6 +14,8 @@ public class UsuarioCreateRequest {
     @Size(min = 8, max = 100)
     private String password;
 
+    private String rol = "PACIENTE";
+
     public String getEmail() {
         return email;
     }
@@ -28,5 +30,13 @@ public class UsuarioCreateRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getRol() {
+        return rol;
+    }
+
+    public void setRol(String rol) {
+        this.rol = rol;
     }
 }

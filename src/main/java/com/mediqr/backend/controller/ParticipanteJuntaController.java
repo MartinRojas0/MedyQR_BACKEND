@@ -1,13 +1,9 @@
 package com.mediqr.backend.controller;
 
-import com.mediqr.backend.dto.ParticipanteJuntaCreateRequest;
-import com.mediqr.backend.dto.ParticipanteJuntaResponse;
-import com.mediqr.backend.exception.ResourceNotFoundException;
+import com.mediqr.backend.model.ParticipanteJunta;
 import com.mediqr.backend.service.ParticipanteJuntaService;
-import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,36 +18,38 @@ public class ParticipanteJuntaController {
         this.participanteJuntaService = participanteJuntaService;
     }
 
-    @GetMapping("/junta/{juntaId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #junta.pacienteId)")
-    public List<ParticipanteJuntaResponse> getByJuntaId(@PathVariable Long juntaId) {
-        return participanteJuntaService.findByJuntaId(juntaId);
+    @GetMapping
+    public List<ParticipanteJunta> getAll() {
+        return participanteJuntaService.findAll();
     }
 
-    @GetMapping("/personal")
-    @PreAuthorize("hasRole('PERSONAL_SALUD')")
-    public List<ParticipanteJuntaResponse> getByPersonal() {
-        // This would need the service to support finding by personal
-        return List.of();
+    @GetMapping("/{id}")
+    public ResponseEntity<ParticipanteJunta> getById(@PathVariable Long id) {
+        return participanteJuntaService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/junta/{juntaId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #junta.pacienteId)")
-    public ResponseEntity<ParticipanteJuntaResponse> addParticipant(@PathVariable Long juntaId,
-                                                                     @Valid @RequestBody ParticipanteJuntaCreateRequest request) {
-        ParticipanteJuntaResponse response = participanteJuntaService.addParticipant(juntaId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    @PostMapping
+    public ResponseEntity<ParticipanteJunta> create(@RequestBody ParticipanteJunta participanteJunta) {
+        ParticipanteJunta savedParticipanteJunta = participanteJuntaService.save(participanteJunta);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedParticipanteJunta);
     }
 
-    @DeleteMapping("/junta/{juntaId}/personal/{personalId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #junta.pacienteId)")
-    public ResponseEntity<Void> removeParticipant(@PathVariable Long juntaId,
-                                                   @PathVariable Long personalId) {
-        try {
-            participanteJuntaService.removeParticipant(juntaId, personalId);
-            return ResponseEntity.noContent().build();
-        } catch (ResourceNotFoundException e) {
+    @PutMapping("/{id}")
+    public ResponseEntity<ParticipanteJunta> update(@PathVariable Long id, @RequestBody ParticipanteJunta participanteJunta) {
+        return participanteJuntaService.update(id, participanteJunta)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        if (participanteJuntaService.findById(id).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
+
+        participanteJuntaService.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
