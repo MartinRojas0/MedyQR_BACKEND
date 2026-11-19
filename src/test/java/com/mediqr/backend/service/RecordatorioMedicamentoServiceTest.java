@@ -6,8 +6,6 @@ import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.RecordatorioMedicamento;
 import com.mediqr.backend.repository.MedicamentoRepository;
 import com.mediqr.backend.repository.RecordatorioMedicamentoRepository;
-import com.mediqr.backend.security.CurrentUserService;
-import com.mediqr.backend.service.RegistroAccesoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,17 +31,11 @@ class RecordatorioMedicamentoServiceTest {
     @Mock
     private MedicamentoRepository medicamentoRepository;
 
-    @Mock
-    private RegistroAccesoService registroAccesoService;
-
-    @Mock
-    private CurrentUserService currentUserService;
-
     private RecordatorioMedicamentoService recordatorioService;
 
     @BeforeEach
     void setUp() {
-        recordatorioService = new RecordatorioMedicamentoService(recordatorioRepository, medicamentoRepository, registroAccesoService, currentUserService);
+        recordatorioService = new RecordatorioMedicamentoService(recordatorioRepository, medicamentoRepository);
     }
 
     @Test

@@ -83,4 +83,21 @@ public class PersonalSaludService {
         getById(id);
         personalSaludRepository.deleteById(id);
     }
+
+    private void apply(PersonalSalud personal, String nombres, String apellidos, String documento,
+                       String telefono, String especialidad, String registro) {
+        personal.setNombres(nombres.trim());
+        personal.setApellidos(apellidos.trim());
+        personal.setDocumentoIdentidad(documento);
+        personal.setTelefono(telefono);
+        personal.setEspecialidad(especialidad);
+        personal.setRegistroProfesional(registro);
+    }
+
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
 }

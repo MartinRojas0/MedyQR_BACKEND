@@ -9,8 +9,6 @@ import com.mediqr.backend.model.Cita;
 import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.repository.PersonalSaludRepository;
 import com.mediqr.backend.repository.CitaRepository;
-import com.mediqr.backend.security.CurrentUserService;
-import com.mediqr.backend.service.RegistroAccesoService;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -24,22 +22,16 @@ public class CitaService {
     private final CitaRepository citaRepository;
     private final PacienteRepository pacienteRepository;
     private final PersonalSaludRepository personalSaludRepository;
-    private final RegistroAccesoService registroAccesoService;
-    private final CurrentUserService currentUserService;
 
     private static final Set<String> ESTADOS_VALIDOS = Set.of(
             "PENDIENTE", "CONFIRMADA", "ATENDIDA", "CANCELADA");
 
     public CitaService(CitaRepository citaRepository,
                        PacienteRepository pacienteRepository,
-                       PersonalSaludRepository personalSaludRepository,
-                       RegistroAccesoService registroAccesoService,
-                       CurrentUserService currentUserService) {
+                       PersonalSaludRepository personalSaludRepository) {
         this.citaRepository = citaRepository;
         this.pacienteRepository = pacienteRepository;
         this.personalSaludRepository = personalSaludRepository;
-        this.registroAccesoService = registroAccesoService;
-        this.currentUserService = currentUserService;
     }
 
     public List<Cita> findAll() {
@@ -60,21 +52,12 @@ public class CitaService {
         cita.setFechaHora(request.getFechaHora());
         cita.setMotivo(request.getMotivo());
         cita.setObservaciones(request.getObservaciones());
-        
-        Cita saved = citaRepository.save(cita);
-        
-        registrarAcceso(saved.getPacienteId(), "CITA", "CREACION_CITA");
-
-        return saved;
+        return citaRepository.save(cita);
     }
 
     public Cita getById(Long id) {
-        Cita cita = citaRepository.findById(id)
+        return citaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
-
-        registrarAcceso(cita.getPacienteId(), "CITA", "LECTURA_CITA");
-
-        return cita;
     }
 
     public Cita update(Long id, CitaUpdateRequest request) {
@@ -86,12 +69,7 @@ public class CitaService {
         cita.setFechaHora(request.getFechaHora());
         cita.setMotivo(request.getMotivo());
         cita.setObservaciones(request.getObservaciones());
-        
-        Cita saved = citaRepository.save(cita);
-        
-        registrarAcceso(saved.getPacienteId(), "CITA", "ACTUALIZACION_CITA");
-
-        return saved;
+        return citaRepository.save(cita);
     }
 
     public Cita updateEstado(Long id, CitaEstadoRequest request) {
@@ -100,12 +78,7 @@ public class CitaService {
             throw new BusinessRuleException("Estado de cita no válido");
         }
         cita.setEstado(request.getEstado());
-        
-        Cita saved = citaRepository.save(cita);
-        
-        registrarAcceso(saved.getPacienteId(), "CITA", "CAMBIO_ESTADO_CITA");
-
-        return saved;
+        return citaRepository.save(cita);
     }
 
     public boolean isAvailable(Long personalId, OffsetDateTime fechaHora) {
@@ -116,11 +89,8 @@ public class CitaService {
     }
 
     public void deleteById(Long id) {
-        Cita cita = getById(id);
-        Long pacienteId = cita.getPacienteId();
+        getById(id);
         citaRepository.deleteById(id);
-        
-        registrarAcceso(pacienteId, "CITA", "ELIMINACION_CITA");
     }
 
     private void validateReferences(Long pacienteId, Long personalId) {
@@ -148,13 +118,6 @@ public class CitaService {
         }
         if (pacienteOcupado) {
             throw new BusinessRuleException("El paciente ya tiene una cita en esa fecha y hora");
-        }
-    }
-
-    private void registrarAcceso(Long pacienteId, String tipoAcceso, String accion) {
-        var currentUser = currentUserService.getCurrentUser();
-        if (currentUser != null) {
-            registroAccesoService.registrarAcceso(currentUser, pacienteId, tipoAcceso, accion, null);
         }
     }
 }
