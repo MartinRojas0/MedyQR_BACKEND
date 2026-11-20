@@ -35,7 +35,7 @@ public class AutorizacionPacienteController {
     }
 
     @GetMapping("/paciente/{pacienteId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #pacienteId)")
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #p0)")
     public List<AutorizacionPacienteResponse> getByPacienteId(@PathVariable Long pacienteId) {
         return autorizacionPacienteService.findByPacienteId(pacienteId);
     }
@@ -53,7 +53,7 @@ public class AutorizacionPacienteController {
     }
 
     @PostMapping("/paciente/{pacienteId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #pacienteId)")
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #p0)")
     public ResponseEntity<AutorizacionPacienteResponse> createForPatient(@PathVariable Long pacienteId,
                                                                           @Valid @RequestBody AutorizacionPacienteCreateRequest request) {
         var currentUser = currentUserService.getCurrentUser();

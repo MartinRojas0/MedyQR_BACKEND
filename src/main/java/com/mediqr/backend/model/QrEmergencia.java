@@ -18,7 +18,17 @@ public class QrEmergencia {
     @Column(name = "paciente_id")
     private Long pacienteId;
 
-    private UUID token = UUID.randomUUID();
+    @Column(name = "token")
+    private UUID token;
+
+    @Column(name = "token_hash", length = 64, unique = true)
+    private String tokenHash;
+
+    @Column(name = "expires_at")
+    private OffsetDateTime expiresAt;
+
+    @Column(name = "revoked_at")
+    private OffsetDateTime revokedAt;
 
     @Column(name = "mostrar_dni")
     private Boolean mostrarDni = true;
@@ -70,6 +80,30 @@ public class QrEmergencia {
 
     public void setToken(UUID token) {
         this.token = token;
+    }
+
+    public String getTokenHash() {
+        return tokenHash;
+    }
+
+    public void setTokenHash(String tokenHash) {
+        this.tokenHash = tokenHash;
+    }
+
+    public OffsetDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(OffsetDateTime expiresAt) {
+        this.expiresAt = expiresAt;
+    }
+
+    public OffsetDateTime getRevokedAt() {
+        return revokedAt;
+    }
+
+    public void setRevokedAt(OffsetDateTime revokedAt) {
+        this.revokedAt = revokedAt;
     }
 
     public Boolean getMostrarDni() {

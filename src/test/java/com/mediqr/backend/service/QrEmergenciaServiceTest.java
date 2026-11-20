@@ -16,6 +16,7 @@ import com.mediqr.backend.repository.RegistroAccesoRepository;
 import com.mediqr.backend.security.CurrentUserService;
 import com.mediqr.backend.service.RegistroAccesoService;
 import com.mediqr.backend.authorization.domain.AccessControlService;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.List;
 
@@ -128,8 +130,7 @@ class QrEmergenciaServiceTest {
         // pacienteRepository.existsById(999L) is NOT called by service (ownership check fails first)
         // No stubbing needed for existsById
 
-        // Service checks ownership first (999L != authenticated user's pacienteId=10L) -> throws IllegalArgumentException
-        assertThrows(IllegalArgumentException.class, () -> qrService.create(request));
+        assertThrows(AccessDeniedException.class, () -> qrService.create(request));
         verify(qrRepository, never()).existsByPacienteId(any());
         verify(qrRepository, never()).save(any());
     }
@@ -162,7 +163,7 @@ class QrEmergenciaServiceTest {
         when(currentUserService.getCurrentUser()).thenReturn(currentUser);
         when(pacienteRepository.findByUsuarioId(1L)).thenReturn(Optional.of(paciente));
 
-        assertThrows(IllegalArgumentException.class, () -> qrService.create(request));
+        assertThrows(AccessDeniedException.class, () -> qrService.create(request));
     }
 
     @Test
@@ -174,7 +175,7 @@ class QrEmergenciaServiceTest {
 
         when(currentUserService.getCurrentUser()).thenReturn(currentUser);
 
-        assertThrows(IllegalArgumentException.class, () -> qrService.create(request));
+        assertThrows(AccessDeniedException.class, () -> qrService.create(request));
     }
 
     @Test
@@ -238,7 +239,7 @@ class QrEmergenciaServiceTest {
         when(qrRepository.findById(4L)).thenReturn(Optional.of(existing));
         // accessControlService.canAccessPatient is NOT called because ownership check fails first
 
-        assertThrows(IllegalArgumentException.class, () -> qrService.update(4L, request));
+        assertThrows(AccessDeniedException.class, () -> qrService.update(4L, request));
     }
 
     @Test
@@ -258,7 +259,7 @@ class QrEmergenciaServiceTest {
         when(qrRepository.findById(4L)).thenReturn(Optional.of(existing));
         // Service doesn't call accessControlService in deleteById
 
-        assertThrows(IllegalArgumentException.class, () -> qrService.deleteById(4L));
+        assertThrows(AccessDeniedException.class, () -> qrService.deleteById(4L));
     }
 
     @Test
@@ -269,6 +270,7 @@ class QrEmergenciaServiceTest {
         qr.setPacienteId(10L);
         qr.setToken(token);
         qr.setActivo(true);
+        qr.setExpiresAt(OffsetDateTime.now().plusDays(1));
         qr.setMostrarDni(true);
         qr.setMostrarTipoSangre(true);
         qr.setMostrarAlergias(true);
@@ -294,7 +296,25 @@ class QrEmergenciaServiceTest {
         assertEquals("Juan", response.getNombres());
         assertEquals("Perez", response.getApellidos());
         assertEquals("12345678", response.getDocumentoIdentidad());
+        assertEquals("12345678", paciente.getDocumentoIdentidad());
         verify(registroAccesoService).registrarAcceso(any(), anyLong(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void accessByTokenRejectsHealthStaffWithoutPatientAuthorization() {
+        UUID token = UUID.randomUUID();
+        QrEmergencia qr = new QrEmergencia();
+        qr.setPacienteId(20L);
+        qr.setToken(token);
+        qr.setActivo(true);
+        qr.setExpiresAt(OffsetDateTime.now().plusDays(1));
+
+        when(currentUserService.getCurrentUser()).thenReturn(doctorUser);
+        when(qrRepository.findByToken(token)).thenReturn(Optional.of(qr));
+        when(accessControlService.canAccessPatient(doctorUser, 20L)).thenReturn(false);
+
+        assertThrows(AccessDeniedException.class, () -> qrService.accessByToken(token));
+        verify(pacienteRepository, never()).findById(20L);
     }
 
     @Test
@@ -305,6 +325,7 @@ class QrEmergenciaServiceTest {
         qr.setPacienteId(10L);
         qr.setToken(token);
         qr.setActivo(true);
+        qr.setExpiresAt(OffsetDateTime.now().plusDays(1));
         qr.setMostrarDni(false);
         qr.setMostrarTipoSangre(false);
         qr.setMostrarAlergias(false);
@@ -353,4 +374,5 @@ class QrEmergenciaServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> qrService.accessByToken(token));
     }
+
 }

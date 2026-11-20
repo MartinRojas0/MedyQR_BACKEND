@@ -2,6 +2,7 @@ package com.mediqr.backend.service;
 
 import com.mediqr.backend.dto.AutorizacionPacienteCreateRequest;
 import com.mediqr.backend.dto.AutorizacionPacienteResponse;
+import com.mediqr.backend.exception.BusinessRuleException;
 import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.AutorizacionPaciente;
 import com.mediqr.backend.model.Paciente;
@@ -12,6 +13,7 @@ import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.repository.PersonalSaludRepository;
 import com.mediqr.backend.repository.UsuarioRepository;
 import com.mediqr.backend.security.CurrentUserService;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,7 +62,7 @@ public class AutorizacionPacienteService {
                                                           AutorizacionPacienteCreateRequest request) {
         // Solo PACIENTE puede crear autorizaciones
         if (!"PACIENTE".equals(currentUser.rol())) {
-            throw new IllegalArgumentException("Solo un paciente puede crear autorizaciones");
+            throw new AccessDeniedException("Solo un paciente puede crear autorizaciones");
         }
 
         // Verificar que el paciente pertenece al usuario autenticado
@@ -68,7 +70,7 @@ public class AutorizacionPacienteService {
                 .orElseThrow(() -> new ResourceNotFoundException("El paciente no existe para este usuario"));
 
         if (!paciente.getId().equals(pacienteId)) {
-            throw new IllegalArgumentException("No puedes autorizar acceso a un paciente que no es tuyo");
+            throw new AccessDeniedException("No puedes autorizar acceso a un paciente que no es tuyo");
         }
 
         // Verificar que el personal existe
@@ -77,7 +79,7 @@ public class AutorizacionPacienteService {
 
         // Verificar si ya existe una autorización ACTIVA
         if (autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(pacienteId, personal.getId(), "ACTIVA")) {
-            throw new IllegalArgumentException("Ya existe una autorización ACTIVA para este personal de salud");
+            throw new BusinessRuleException("Ya existe una autorización ACTIVA para este personal de salud");
         }
 
         // Verificar si existe una REVOCADA para reactivar
@@ -104,7 +106,7 @@ public class AutorizacionPacienteService {
     public AutorizacionPacienteResponse revokeForPatient(CurrentUserService.CurrentUser currentUser, Long autorizacionId) {
         // Solo PACIENTE puede revocar
         if (!"PACIENTE".equals(currentUser.rol())) {
-            throw new IllegalArgumentException("Solo un paciente puede revocar autorizaciones");
+            throw new AccessDeniedException("Solo un paciente puede revocar autorizaciones");
         }
 
         AutorizacionPaciente autorizacion = autorizacionPacienteRepository.findById(autorizacionId)
@@ -115,11 +117,11 @@ public class AutorizacionPacienteService {
                 .orElseThrow(() -> new ResourceNotFoundException("El paciente no existe para este usuario"));
 
         if (!autorizacion.getPacienteId().equals(paciente.getId())) {
-            throw new IllegalArgumentException("No puedes revocar una autorización de un paciente que no es tuyo");
+            throw new AccessDeniedException("No puedes revocar una autorización de un paciente que no es tuyo");
         }
 
         if (!"ACTIVA".equals(autorizacion.getEstado())) {
-            throw new IllegalArgumentException("Solo se pueden revocar autorizaciones ACTIVAS");
+            throw new BusinessRuleException("Solo se pueden revocar autorizaciones ACTIVAS");
         }
 
         autorizacion.setEstado("REVOCADA");

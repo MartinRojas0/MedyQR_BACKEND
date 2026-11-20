@@ -18,6 +18,9 @@ public class Usuario {
 
     private String email;
 
+    @Column(name = "username", length = 30)
+    private String username;
+
     @Column(name = "password_hash")
     private String passwordHash;
 
@@ -50,6 +53,14 @@ public class Usuario {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     @JsonIgnore

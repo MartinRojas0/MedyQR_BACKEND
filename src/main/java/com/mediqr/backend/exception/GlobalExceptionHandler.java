@@ -5,11 +5,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.stream.Collectors;
 
@@ -28,6 +30,18 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, exception.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidDocumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidDocument(InvalidDocumentException exception, HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    public ErrorResponse handleFileTooLarge(HttpServletRequest request) {
+        return error(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo supera el límite de 10 MB.", request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleValidation(MethodArgumentNotValidException exception, HttpServletRequest request) {
@@ -41,6 +55,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleBadRequest(Exception exception, HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "La solicitud no tiene un formato válido", request);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleAccessDenied(AccessDeniedException exception, HttpServletRequest request) {
+        return error(HttpStatus.FORBIDDEN, "No tienes permiso para acceder a este recurso", request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

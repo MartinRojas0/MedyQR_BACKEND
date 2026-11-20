@@ -23,7 +23,7 @@ public class ParticipanteJuntaController {
     }
 
     @GetMapping("/junta/{juntaId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #junta.pacienteId)")
+    @PreAuthorize("@accessControl.canAccessJunta(@currentUserService.getCurrentUser(), #p0)")
     public List<ParticipanteJuntaResponse> getByJuntaId(@PathVariable Long juntaId) {
         return participanteJuntaService.findByJuntaId(juntaId);
     }
@@ -36,7 +36,7 @@ public class ParticipanteJuntaController {
     }
 
     @PostMapping("/junta/{juntaId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #junta.pacienteId)")
+    @PreAuthorize("@accessControl.canAccessJunta(@currentUserService.getCurrentUser(), #p0)")
     public ResponseEntity<ParticipanteJuntaResponse> addParticipant(@PathVariable Long juntaId,
                                                                      @Valid @RequestBody ParticipanteJuntaCreateRequest request) {
         ParticipanteJuntaResponse response = participanteJuntaService.addParticipant(juntaId, request);
@@ -44,7 +44,7 @@ public class ParticipanteJuntaController {
     }
 
     @DeleteMapping("/junta/{juntaId}/personal/{personalId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #junta.pacienteId)")
+    @PreAuthorize("@accessControl.canAccessJunta(@currentUserService.getCurrentUser(), #p0)")
     public ResponseEntity<Void> removeParticipant(@PathVariable Long juntaId,
                                                    @PathVariable Long personalId) {
         try {

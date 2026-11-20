@@ -4,8 +4,12 @@ import com.mediqr.backend.dto.PacienteCreateRequest;
 import com.mediqr.backend.exception.BusinessRuleException;
 import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.Paciente;
+import com.mediqr.backend.model.AutorizacionPaciente;
+import com.mediqr.backend.model.PersonalSalud;
 import com.mediqr.backend.model.Usuario;
+import com.mediqr.backend.repository.AutorizacionPacienteRepository;
 import com.mediqr.backend.repository.PacienteRepository;
+import com.mediqr.backend.repository.PersonalSaludRepository;
 import com.mediqr.backend.repository.UsuarioRepository;
 import com.mediqr.backend.security.CurrentUserService;
 import com.mediqr.backend.service.RegistroAccesoService;
@@ -16,6 +20,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -39,11 +45,18 @@ class PacienteServiceTest {
     @Mock
     private CurrentUserService currentUserService;
 
+    @Mock
+    private AutorizacionPacienteRepository autorizacionPacienteRepository;
+
+    @Mock
+    private PersonalSaludRepository personalSaludRepository;
+
     private PacienteService pacienteService;
 
     @BeforeEach
     void setUp() {
-        pacienteService = new PacienteService(pacienteRepository, usuarioRepository, registroAccesoService, currentUserService);
+        pacienteService = new PacienteService(pacienteRepository, usuarioRepository, registroAccesoService,
+                currentUserService, autorizacionPacienteRepository, personalSaludRepository);
     }
 
     @Test
@@ -151,5 +164,43 @@ class PacienteServiceTest {
         when(usuarioRepository.findById(3L)).thenReturn(Optional.of(usuario));
 
         assertThrows(IllegalArgumentException.class, () -> pacienteService.create(request));
+    }
+
+    @Test
+    void professionalListIncludesOnlyActiveExplicitlyAuthorizedPatients() {
+        CurrentUserService.CurrentUser currentUser = new CurrentUserService.CurrentUser(
+                2L, "doctor@test.com", "PERSONAL_SALUD", true);
+        PersonalSalud personal = new PersonalSalud();
+        personal.setId(5L);
+        personal.setUsuarioId(2L);
+        AutorizacionPaciente authorization = new AutorizacionPaciente();
+        authorization.setPacienteId(10L);
+        authorization.setPersonalId(5L);
+        authorization.setEstado("ACTIVA");
+        Paciente authorized = new Paciente();
+        authorized.setId(10L);
+        authorized.setActivo(true);
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(personal));
+        when(autorizacionPacienteRepository.findByPersonalIdAndEstado(5L, "ACTIVA"))
+                .thenReturn(List.of(authorization));
+        when(pacienteRepository.findAllById(Set.of(10L))).thenReturn(List.of(authorized));
+
+        List<Paciente> result = pacienteService.findAuthorizedForCurrentProfessional();
+
+        assertEquals(List.of(authorized), result);
+        verify(registroAccesoService).registrarAcceso(currentUser, 10L, "PACIENTE", "LISTADO_AUTORIZADO", null);
+    }
+
+    @Test
+    void patientCannotUseProfessionalPatientList() {
+        when(currentUserService.getCurrentUser()).thenReturn(new CurrentUserService.CurrentUser(
+                1L, "patient@test.com", "PACIENTE", true));
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> pacienteService.findAuthorizedForCurrentProfessional());
+
+        verify(personalSaludRepository, never()).findByUsuarioId(any());
+        verify(autorizacionPacienteRepository, never()).findByPersonalIdAndEstado(any(), any());
     }
 }
