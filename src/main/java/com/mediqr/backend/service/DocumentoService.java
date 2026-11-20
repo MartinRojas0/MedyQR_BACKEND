@@ -10,6 +10,7 @@ import com.mediqr.backend.repository.DocumentoRepository;
 import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.security.CurrentUserService;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
+@ConditionalOnProperty(name = "MEDIQR_DOCUMENT_STORAGE_DIR")
 public class DocumentoService {
 
     private static final List<String> TIPOS = List.of("Receta", "Examen", "Informe", "Otro");

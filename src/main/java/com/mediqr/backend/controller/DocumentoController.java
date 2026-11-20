@@ -2,6 +2,7 @@ package com.mediqr.backend.controller;
 
 import com.mediqr.backend.dto.DocumentoResponse;
 import com.mediqr.backend.service.DocumentoService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
@@ -26,6 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/documentos/me")
 @PreAuthorize("hasRole('PACIENTE')")
+@ConditionalOnProperty(name = "MEDIQR_DOCUMENT_STORAGE_DIR")
 public class DocumentoController {
 
     private final DocumentoService documentoService;

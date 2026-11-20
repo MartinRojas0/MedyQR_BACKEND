@@ -44,9 +44,15 @@ synthetic, non-medical data. The profile authorization bean-name correction
 
 The integrated branch includes email-or-username login, patient-owned
 appointments, emergency-contact persistence, secure QR issuance/public
-resolution, and private document metadata/storage. It is not ready to deploy
-until all three manual migrations are reviewed and explicitly authorized for
-the target database, and durable private document storage is configured:
+resolution, and private document metadata/storage. In the Render Free
+configuration, document routes and storage components are not registered
+unless `MEDIQR_DOCUMENT_STORAGE_DIR` is set. Leave it unset: Free has no
+persistent disk, and documents must not be stored on its ephemeral filesystem.
+Other API features do not require this variable.
+
+The document feature must remain disabled until durable private storage is
+available. All three manual migrations still require review and explicit
+authorization before application to the target database:
 
 - [`username migration`](manual-migrations/20261119_add_username.sql)
 - [`QR and emergency-contact migration`](manual-migrations/20261119_add_qr_emergency_contact.sql)
@@ -60,8 +66,8 @@ PostgreSQL database matching the actual schema, and inspect the existing data
 before requesting production authorization. The
 included rollback scripts deliberately refuse to discard usernames, issued QR
 tokens, saved emergency contacts, or non-empty document metadata. Render's
-current free service has no persistent disk configured; do not deploy medical
-documents there until a durable, private storage target is provided.
+current free service has no persistent disk configured; do not enable document
+routes there until a durable, private storage target is provided.
 
 The patient API exposes registration, login, the authenticated patient's own
 personal profile and clinical history, emergency-contact operations,

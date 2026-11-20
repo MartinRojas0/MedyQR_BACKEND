@@ -2,6 +2,7 @@ package com.mediqr.backend.service;
 
 import com.mediqr.backend.exception.InvalidDocumentException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,13 +15,17 @@ import java.util.Locale;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(name = "MEDIQR_DOCUMENT_STORAGE_DIR")
 public class DocumentoStorageService {
 
     private static final long MAX_SIZE_BYTES = 10L * 1024 * 1024;
     private final Path storageRoot;
 
     public DocumentoStorageService(
-            @Value("${app.documents.storage-dir:./data/documents}") String storageDirectory) {
+            @Value("${MEDIQR_DOCUMENT_STORAGE_DIR}") String storageDirectory) {
+        if (storageDirectory.isBlank()) {
+            throw new IllegalStateException("MEDIQR_DOCUMENT_STORAGE_DIR must not be blank");
+        }
         try {
             this.storageRoot = Path.of(storageDirectory).toAbsolutePath().normalize();
         } catch (InvalidPathException exception) {

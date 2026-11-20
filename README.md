@@ -7,9 +7,11 @@ alojada en Neon y el servicio se publica en Render.
 ## Alcance verificado localmente
 
 La rama `feat/integracion-final` integra APIs autenticadas de perfil, historial,
-contacto de emergencia, QR, documentos privados y citas. Las cuentas nuevas se
-registran como `PACIENTE`; las operaciones de personal de salud mantienen sus
-controles de rol y autorización.
+contacto de emergencia, QR, documentos privados y citas. En Render Free, las
+rutas y el almacenamiento de documentos quedan deshabilitados si no se
+configura `MEDIQR_DOCUMENT_STORAGE_DIR`; las demás funciones no dependen de esa
+variable. Las cuentas nuevas se registran como `PACIENTE`; las operaciones de
+personal de salud mantienen sus controles de rol y autorización.
 
 - `.\mvnw.cmd -B -ntp test`: 135 pruebas pasaron con H2.
 - El backend arrancó con el perfil `demo`; `/api/health` respondió `{"status":"ok"}`.
@@ -76,12 +78,14 @@ Render o en el entorno local:
 | `DB_PASSWORD` | Contraseña PostgreSQL del perfil normal |
 | `JWT_SECRET` | Secreto Base64 JWT del perfil normal |
 | `MEDIQR_DEMO_JWT_SECRET` | Secreto Base64 JWT requerido por el perfil local `demo` |
-| `MEDIQR_DOCUMENT_STORAGE_DIR` | Ruta local privada de documentos; obligatoria fuera del perfil demo |
+| `MEDIQR_DOCUMENT_STORAGE_DIR` | Ruta de almacenamiento privado; si falta, las rutas de documentos no se registran |
 | `MEDIQR_CORS_ALLOWED_ORIGINS` | Orígenes web permitidos, separados por coma |
 | `PORT` / `SERVER_PORT` | Puerto Render / puerto local de Spring Boot |
 
-Render despliega desde `feat/integracion-backend` con el `Dockerfile` y
-`render.yaml`. La guía de despliegue y el formato de `JWT_SECRET` están en
+Render despliega desde `dev` con el `Dockerfile` y `render.yaml`. En Render Free
+no configures `MEDIQR_DOCUMENT_STORAGE_DIR`: no hay disco persistente y la
+función de documentos permanece deshabilitada. La guía de despliegue y el
+formato de `JWT_SECRET` están en
 [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## Pruebas y build
@@ -104,8 +108,10 @@ Este resultado no es una prueba de compatibilidad real con PostgreSQL.
 
 - Probar las migraciones manuales en una base PostgreSQL desechable y revisar su
   rollback; PostgreSQL, Docker y `psql` no estaban disponibles en el entorno.
-- Configurar y probar almacenamiento privado persistente para documentos. La
-  ruta local no es durable en Render y `render.yaml` no crea un disco.
+- Habilitar documentos solo después de disponer de almacenamiento privado y
+  persistente; Render Free no ofrece discos persistentes. Sin
+  `MEDIQR_DOCUMENT_STORAGE_DIR`, Spring no registra los endpoints ni los
+  componentes de almacenamiento de documentos.
 - Revisar los cambios y obtener autorización antes de aplicar migraciones o
   desplegar. No se modificaron Neon, Render ni Vercel.
 - La H2 de demostración no incluye personal de salud; la reserva real de citas
