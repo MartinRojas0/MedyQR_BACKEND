@@ -28,7 +28,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "MEDIQR_DOCUMENT_STORAGE_DIR=${java.io.tmpdir}/mediqr-document-tests")
+@SpringBootTest(properties = {
+        "MEDIQR_DOCUMENT_STORAGE_DIR=${java.io.tmpdir}/mediqr-document-tests",
+        "mediqr.documents.enabled=true"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class DocumentoControllerIntegrationTest {

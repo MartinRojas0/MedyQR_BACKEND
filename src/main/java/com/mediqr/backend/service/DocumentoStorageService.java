@@ -15,7 +15,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 @Service
-@ConditionalOnProperty(name = "MEDIQR_DOCUMENT_STORAGE_DIR")
+@ConditionalOnProperty(name = "mediqr.documents.enabled", havingValue = "true")
 public class DocumentoStorageService {
 
     private static final long MAX_SIZE_BYTES = 10L * 1024 * 1024;

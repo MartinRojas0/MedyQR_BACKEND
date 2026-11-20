@@ -27,7 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/documentos/me")
 @PreAuthorize("hasRole('PACIENTE')")
-@ConditionalOnProperty(name = "MEDIQR_DOCUMENT_STORAGE_DIR")
+@ConditionalOnProperty(name = "mediqr.documents.enabled", havingValue = "true")
 public class DocumentoController {
 
     private final DocumentoService documentoService;

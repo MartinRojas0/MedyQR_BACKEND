@@ -80,6 +80,16 @@ class PatientIsolationIntegrationTest {
     }
 
     @Test
+    void medicalDocumentsEndpointsAreDisabledByDefault() throws Exception {
+        PatientSession patient = registerAndLogin(
+                "documents.disabled@example.test", "documents_disabled", "documents_disabled");
+
+        mockMvc.perform(get("/api/documentos/me")
+                        .header("Authorization", patient.authorization()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void existingPatientAccountCanLoginRecoverProfileAndAccessPatientModules() throws Exception {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         String email = "existing." + suffix + "@example.test";

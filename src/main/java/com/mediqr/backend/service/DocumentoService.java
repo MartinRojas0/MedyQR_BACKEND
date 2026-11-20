@@ -20,7 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
-@ConditionalOnProperty(name = "MEDIQR_DOCUMENT_STORAGE_DIR")
+@ConditionalOnProperty(name = "mediqr.documents.enabled", havingValue = "true")
 public class DocumentoService {
 
     private static final List<String> TIPOS = List.of("Receta", "Examen", "Informe", "Otro");
