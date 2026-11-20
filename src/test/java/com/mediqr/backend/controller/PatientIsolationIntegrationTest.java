@@ -2,6 +2,7 @@ package com.mediqr.backend.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mediqr.backend.model.Paciente;
 import com.mediqr.backend.model.QrEmergencia;
 import com.mediqr.backend.model.PersonalSalud;
 import com.mediqr.backend.model.Usuario;
@@ -9,15 +10,20 @@ import com.mediqr.backend.repository.PacienteRepository;
 import com.mediqr.backend.repository.PersonalSaludRepository;
 import com.mediqr.backend.repository.QrEmergenciaRepository;
 import com.mediqr.backend.repository.UsuarioRepository;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.Date;
 import java.util.UUID;
 import java.security.MessageDigest;
 import java.time.OffsetDateTime;
@@ -37,6 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class PatientIsolationIntegrationTest {
 
+    private static final String TEST_JWT_SECRET = "bWVkaXFyLXRlc3Qta2V5LWF0LWxlYXN0LTMyLWJ5dGVzIQ==";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -52,6 +60,9 @@ class PatientIsolationIntegrationTest {
     @Autowired
     private PersonalSaludRepository personalSaludRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
@@ -66,6 +77,67 @@ class PatientIsolationIntegrationTest {
                 "roles.patient@example.test", "roles_patient", "roles_patient");
         mockMvc.perform(get("/api/citas").header("Authorization", patient.authorization()))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void existingPatientAccountCanLoginRecoverProfileAndAccessPatientModules() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String email = "existing." + suffix + "@example.test";
+        String password = "existing-account-test-password";
+
+        Usuario usuario = new Usuario();
+        usuario.setEmail(email);
+        usuario.setUsername("existing_" + suffix);
+        usuario.setPasswordHash(passwordEncoder.encode(password));
+        usuario.setRol("PACIENTE");
+        usuario.setActivo(true);
+        Usuario savedUsuario = usuarioRepository.save(usuario);
+
+        Paciente paciente = new Paciente();
+        paciente.setUsuarioId(savedUsuario.getId());
+        paciente.setNombres("Paciente existente");
+        paciente.setApellidos("Prueba");
+        pacienteRepository.save(paciente);
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new Login(email, password))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(savedUsuario.getId()))
+                .andExpect(jsonPath("$.rol").value("PACIENTE"))
+                .andReturn();
+
+        String token = objectMapper.readTree(loginResult.getResponse().getContentAsString())
+                .path("token").asText();
+        String authorization = "Bearer " + token;
+
+        mockMvc.perform(get("/api/auth/me").header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(savedUsuario.getId()))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.rol").value("PACIENTE"));
+        mockMvc.perform(get("/api/pacientes/me").header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombres").value("Paciente existente"));
+        mockMvc.perform(get("/api/citas/me").header("Authorization", authorization))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void malformedAndExpiredTokensAreUnauthorizedForProfileEndpoints() throws Exception {
+        String expiredToken = Jwts.builder()
+                .subject("expired@example.test")
+                .issuedAt(new Date(System.currentTimeMillis() - 120_000))
+                .expiration(new Date(System.currentTimeMillis() - 60_000))
+                .signWith(Keys.hmacShaKeyFor(Decoders.BASE64.decode(TEST_JWT_SECRET)), Jwts.SIG.HS256)
+                .compact();
+
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + expiredToken))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/pacientes/me").header("Authorization", "Bearer " + expiredToken))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

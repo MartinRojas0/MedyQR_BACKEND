@@ -16,19 +16,22 @@ base schema separately and review these migrations before deployment.
 3. Apply `20261119_add_username.sql`. Existing accounts retain a `NULL`
    username and continue to log in by email. New usernames are normalized to
    lowercase by the application and are unique case-insensitively.
-4. Inspect existing `qr_emergencia` columns, patient references, and active
+4. Apply `20261120_add_patient_emergency_contact_columns.sql` before deploying
+   patient profile endpoints. It adds only the three nullable emergency-contact
+   columns and does not change existing rows. The QR migration below also adds
+   these columns idempotently.
+5. Inspect existing `qr_emergencia` columns, patient references, and active
    duplicates. Apply `20261119_add_qr_emergency_contact.sql` only after review.
-   It adds optional emergency-contact fields and the token hash/expiry/revocation
-   columns. Existing raw UUID QR records are retained, but the new public API
-   does not resolve them. New tokens are random 256-bit values; only their
-   SHA-256 hashes are stored.
-5. Before applying `20261120_add_documentos.sql`, verify that
+   It also adds the token hash/expiry/revocation columns. Existing raw UUID QR
+   records are retained, but the new public API does not resolve them. New
+   tokens are random 256-bit values; only their SHA-256 hashes are stored.
+6. Before applying `20261120_add_documentos.sql`, verify that
    `public.pacientes` and `public.citas` exist with `BIGINT` primary keys.
    The migration stores metadata only; uploaded bytes remain in
    `app.documents.storage-dir`. Configure durable private storage before
    deploying the document feature. The current Render configuration does not
    declare a persistent disk, so its default local storage is not durable.
-6. Deploy only after all required migrations succeed and document storage
+7. Deploy only after all required migrations succeed and document storage
    persistence has been configured and tested.
 
 The document rollback refuses to drop non-empty metadata. Export and reconcile

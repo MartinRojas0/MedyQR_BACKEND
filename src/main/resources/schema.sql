@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS public.pacientes (
     telefono VARCHAR(255),
     direccion VARCHAR(255),
     sexo VARCHAR(255),
+    contacto_emergencia_nombre VARCHAR(120),
+    contacto_emergencia_parentesco VARCHAR(80),
+    contacto_emergencia_telefono VARCHAR(30),
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
