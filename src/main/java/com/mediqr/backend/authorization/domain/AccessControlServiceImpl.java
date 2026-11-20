@@ -32,36 +32,39 @@ public class AccessControlServiceImpl implements AccessControlService {
 
     @Override
     public boolean canAccessPatient(CurrentUserService.CurrentUser currentUser, Long pacienteId) {
-        if (currentUser == null || pacienteId == null) {
+        if (currentUser == null || pacienteId == null || !Boolean.TRUE.equals(currentUser.activo())) {
             return false;
         }
 
         // PACIENTE: solo puede acceder a su propio paciente
         if ("PACIENTE".equals(currentUser.rol())) {
             return pacienteRepository.findByUsuarioId(currentUser.userId())
-                    .map(p -> p.getId().equals(pacienteId))
+                    .map(p -> Boolean.TRUE.equals(p.getActivo()) && p.getId().equals(pacienteId))
                     .orElse(false);
         }
 
-        // PERSONAL_SALUD: requiere autorización ACTIVA O participación en Junta Médica ACTIVA y vigente
+        // A junta membership alone is not patient consent; every professional
+        // must have an active patient-granted authorization.
         if ("PERSONAL_SALUD".equals(currentUser.rol())) {
             return personalSaludRepository.findByUsuarioId(currentUser.userId())
-                    .map(personal -> {
-                        // Opción 1: AutorizaciónPaciente ACTIVA
-                        boolean tieneAutorizacion = autorizacionPacienteRepository
-                                .existsByPacienteIdAndPersonalIdAndEstado(pacienteId, personal.getId(), "ACTIVA");
-
-                        // Opción 2: Junta Médica ACTIVA y vigente donde es participante
-                        boolean tieneJuntaMedica = juntaMedicaRepository
-                                .existsActiveByPacienteIdAndParticipante(pacienteId, personal.getId());
-
-                        return tieneAutorizacion || tieneJuntaMedica;
-                    })
+                    .map(personal -> Boolean.TRUE.equals(personal.getActivo())
+                            && autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(
+                                    pacienteId, personal.getId(), "ACTIVA"))
                     .orElse(false);
         }
 
         // Cualquier otro rol: denegar
         return false;
+    }
+
+    @Override
+    public boolean canAccessJunta(CurrentUserService.CurrentUser currentUser, Long juntaId) {
+        if (juntaId == null) {
+            return false;
+        }
+        return juntaMedicaRepository.findById(juntaId)
+                .map(junta -> canAccessPatient(currentUser, junta.getPacienteId()))
+                .orElse(false);
     }
 
     @Override

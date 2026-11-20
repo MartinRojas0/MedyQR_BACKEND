@@ -17,9 +17,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Usuario usuario = usuarioService.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
+    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
+        Usuario usuario = usuarioService.findByLoginIdentifier(identifier)
+                .orElseThrow(() -> new UsernameNotFoundException("Credenciales inválidas"));
         return UserDetailsImpl.build(usuario);
     }
 }

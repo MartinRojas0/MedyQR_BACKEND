@@ -2,7 +2,7 @@ package com.mediqr.backend.service;
 
 import com.mediqr.backend.dto.AutorizacionPacienteCreateRequest;
 import com.mediqr.backend.dto.AutorizacionPacienteResponse;
-import com.mediqr.backend.exception.ResourceNotFoundException;
+import com.mediqr.backend.exception.BusinessRuleException;
 import com.mediqr.backend.model.AutorizacionPaciente;
 import com.mediqr.backend.model.Paciente;
 import com.mediqr.backend.model.PersonalSalud;
@@ -13,12 +13,9 @@ import com.mediqr.backend.security.CurrentUserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import com.mediqr.backend.security.CurrentUserService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -95,7 +92,7 @@ class AutorizacionPacienteServiceTest {
         AutorizacionPacienteCreateRequest request = new AutorizacionPacienteCreateRequest();
         request.setPersonalId(5L);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> autorizacionPacienteService.createForPatient(currentUser, pacienteId, request));
 
         assertEquals("Solo un paciente puede crear autorizaciones", ex.getMessage());
@@ -115,7 +112,7 @@ class AutorizacionPacienteServiceTest {
         AutorizacionPacienteCreateRequest request = new AutorizacionPacienteCreateRequest();
         request.setPersonalId(5L);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> autorizacionPacienteService.createForPatient(currentUser, pacienteId, request));
 
         assertEquals("No puedes autorizar acceso a un paciente que no es tuyo", ex.getMessage());
@@ -140,7 +137,7 @@ class AutorizacionPacienteServiceTest {
         when(personalSaludRepository.findById(5L)).thenReturn(Optional.of(personal));
         when(autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(pacienteId, 5L, "ACTIVA")).thenReturn(true);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> autorizacionPacienteService.createForPatient(currentUser, pacienteId, request));
 
         assertEquals("Ya existe una autorización ACTIVA para este personal de salud", ex.getMessage());
@@ -227,7 +224,7 @@ class AutorizacionPacienteServiceTest {
         CurrentUserService.CurrentUser currentUser = new CurrentUserService.CurrentUser(2L, "doctor@test.com", "PERSONAL_SALUD", true);
         Long autorizacionId = 1L;
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> autorizacionPacienteService.revokeForPatient(currentUser, autorizacionId));
 
         assertEquals("Solo un paciente puede revocar autorizaciones", ex.getMessage());
@@ -251,7 +248,7 @@ class AutorizacionPacienteServiceTest {
         when(autorizacionPacienteRepository.findById(autorizacionId)).thenReturn(Optional.of(autorizacion));
         when(pacienteRepository.findByUsuarioId(1L)).thenReturn(Optional.of(paciente));
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> autorizacionPacienteService.revokeForPatient(currentUser, autorizacionId));
 
         assertEquals("No puedes revocar una autorización de un paciente que no es tuyo", ex.getMessage());
@@ -275,7 +272,7 @@ class AutorizacionPacienteServiceTest {
         when(autorizacionPacienteRepository.findById(autorizacionId)).thenReturn(Optional.of(autorizacion));
         when(pacienteRepository.findByUsuarioId(1L)).thenReturn(Optional.of(paciente));
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> autorizacionPacienteService.revokeForPatient(currentUser, autorizacionId));
 
         assertEquals("Solo se pueden revocar autorizaciones ACTIVAS", ex.getMessage());

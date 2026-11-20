@@ -7,6 +7,7 @@ import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.JuntaMedica;
 import com.mediqr.backend.model.ParticipanteJunta;
 import com.mediqr.backend.model.PersonalSalud;
+import com.mediqr.backend.repository.AutorizacionPacienteRepository;
 import com.mediqr.backend.repository.JuntaMedicaRepository;
 import com.mediqr.backend.repository.ParticipanteJuntaRepository;
 import com.mediqr.backend.repository.PersonalSaludRepository;
@@ -50,12 +51,16 @@ class ParticipanteJuntaServiceTest {
     @Mock
     private CurrentUserService currentUserService;
 
+    @Mock
+    private AutorizacionPacienteRepository autorizacionPacienteRepository;
+
     private ParticipanteJuntaService participanteJuntaService;
 
     @BeforeEach
     void setUp() {
         participanteJuntaService = new ParticipanteJuntaService(
-                participanteJuntaRepository, juntaMedicaRepository, personalSaludRepository, registroAccesoService, currentUserService);
+                participanteJuntaRepository, juntaMedicaRepository, personalSaludRepository, registroAccesoService,
+                currentUserService, autorizacionPacienteRepository);
     }
 
     @Test
@@ -89,6 +94,8 @@ class ParticipanteJuntaServiceTest {
         when(juntaMedicaRepository.findById(juntaId)).thenReturn(Optional.of(junta));
         when(personalSaludRepository.findById(personalId)).thenReturn(Optional.of(participante));
         when(participanteJuntaRepository.existsByJuntaIdAndPersonalId(juntaId, personalId)).thenReturn(false);
+        when(autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(10L, personalId, "ACTIVA"))
+                .thenReturn(true);
         when(participanteJuntaRepository.save(any(ParticipanteJunta.class))).thenAnswer(invocation -> {
             ParticipanteJunta p = invocation.getArgument(0);
             p.setId(1L);
@@ -103,6 +110,38 @@ class ParticipanteJuntaServiceTest {
         assertEquals("Gomez", response.getPersonalApellidos());
         verify(participanteJuntaRepository).save(any(ParticipanteJunta.class));
         verify(registroAccesoService).registrarAcceso(any(CurrentUserService.CurrentUser.class), anyLong(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void addParticipantRejectsWithoutPatientAuthorization() {
+        CurrentUserService.CurrentUser currentUser = new CurrentUserService.CurrentUser(
+                2L, "doctor@test.com", "PERSONAL_SALUD", true);
+        PersonalSalud creator = new PersonalSalud();
+        creator.setId(5L);
+        creator.setUsuarioId(2L);
+        PersonalSalud participant = new PersonalSalud();
+        participant.setId(6L);
+        JuntaMedica junta = new JuntaMedica();
+        junta.setId(1L);
+        junta.setPacienteId(10L);
+        junta.setCreadorId(5L);
+        junta.setEstado("ACTIVA");
+        junta.setFechaInicio(OffsetDateTime.now().minusHours(1));
+        junta.setFechaExpiracion(OffsetDateTime.now().plusDays(1));
+        ParticipanteJuntaCreateRequest request = new ParticipanteJuntaCreateRequest();
+        request.setPersonalId(6L);
+
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(creator));
+        when(juntaMedicaRepository.findById(1L)).thenReturn(Optional.of(junta));
+        when(personalSaludRepository.findById(6L)).thenReturn(Optional.of(participant));
+        when(participanteJuntaRepository.existsByJuntaIdAndPersonalId(1L, 6L)).thenReturn(false);
+        when(autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(10L, 6L, "ACTIVA"))
+                .thenReturn(false);
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> participanteJuntaService.addParticipant(1L, request));
+        verify(participanteJuntaRepository, org.mockito.Mockito.never()).save(any(ParticipanteJunta.class));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.mediqr.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -33,6 +34,15 @@ public class Paciente {
     private String direccion;
 
     private String sexo;
+
+    @Column(name = "contacto_emergencia_nombre", length = 120)
+    private String contactoEmergenciaNombre;
+
+    @Column(name = "contacto_emergencia_parentesco", length = 80)
+    private String contactoEmergenciaParentesco;
+
+    @Column(name = "contacto_emergencia_telefono", length = 30)
+    private String contactoEmergenciaTelefono;
 
     private Boolean activo = true;
 
@@ -117,6 +127,33 @@ public class Paciente {
 
     public void setSexo(String sexo) {
         this.sexo = sexo;
+    }
+
+    @JsonIgnore
+    public String getContactoEmergenciaNombre() {
+        return contactoEmergenciaNombre;
+    }
+
+    public void setContactoEmergenciaNombre(String contactoEmergenciaNombre) {
+        this.contactoEmergenciaNombre = contactoEmergenciaNombre;
+    }
+
+    @JsonIgnore
+    public String getContactoEmergenciaParentesco() {
+        return contactoEmergenciaParentesco;
+    }
+
+    public void setContactoEmergenciaParentesco(String contactoEmergenciaParentesco) {
+        this.contactoEmergenciaParentesco = contactoEmergenciaParentesco;
+    }
+
+    @JsonIgnore
+    public String getContactoEmergenciaTelefono() {
+        return contactoEmergenciaTelefono;
+    }
+
+    public void setContactoEmergenciaTelefono(String contactoEmergenciaTelefono) {
+        this.contactoEmergenciaTelefono = contactoEmergenciaTelefono;
     }
 
     public Boolean getActivo() {

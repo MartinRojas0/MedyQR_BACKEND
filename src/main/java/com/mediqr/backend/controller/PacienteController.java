@@ -1,6 +1,7 @@
 package com.mediqr.backend.controller;
 
 import com.mediqr.backend.dto.PacienteCreateRequest;
+import com.mediqr.backend.dto.PacienteResumenResponse;
 import com.mediqr.backend.dto.PacienteUpdateRequest;
 import com.mediqr.backend.model.Paciente;
 import com.mediqr.backend.service.PacienteService;
@@ -24,13 +25,16 @@ public class PacienteController {
 
     @GetMapping
     @PreAuthorize("hasRole('PERSONAL_SALUD')")
-    public List<Paciente> getAll() {
-        return pacienteService.findAll();
+    public List<PacienteResumenResponse> getAll() {
+        return pacienteService.findAuthorizedForCurrentProfessional().stream()
+                .map(paciente -> new PacienteResumenResponse(
+                        paciente.getId(), paciente.getNombres(), paciente.getApellidos()))
+                .toList();
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #id)")
-    public ResponseEntity<Paciente> getById(@PathVariable Long id) {
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #p0)")
+    public ResponseEntity<Paciente> getById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(pacienteService.getById(id));
     }
 
@@ -42,15 +46,15 @@ public class PacienteController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #id)")
-    public ResponseEntity<Paciente> update(@PathVariable Long id,
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #p0)")
+    public ResponseEntity<Paciente> update(@PathVariable("id") Long id,
                                            @Valid @RequestBody PacienteUpdateRequest request) {
         return ResponseEntity.ok(pacienteService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #id)")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #p0)")
+    public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
         pacienteService.deleteById(id);
         return ResponseEntity.noContent().build();
     }

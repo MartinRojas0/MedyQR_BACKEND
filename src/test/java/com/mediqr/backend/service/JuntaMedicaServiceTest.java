@@ -1,5 +1,6 @@
 package com.mediqr.backend.service;
 
+import com.mediqr.backend.authorization.domain.AccessControlService;
 import com.mediqr.backend.dto.JuntaMedicaCreateRequest;
 import com.mediqr.backend.dto.JuntaMedicaResponse;
 import com.mediqr.backend.dto.JuntaMedicaUpdateRequest;
@@ -51,12 +52,16 @@ class JuntaMedicaServiceTest {
     @Mock
     private CurrentUserService currentUserService;
 
+    @Mock
+    private AccessControlService accessControlService;
+
     private JuntaMedicaService juntaMedicaService;
 
     @BeforeEach
     void setUp() {
         juntaMedicaService = new JuntaMedicaService(
-                juntaMedicaRepository, pacienteRepository, personalSaludRepository, registroAccesoService, currentUserService);
+                juntaMedicaRepository, pacienteRepository, personalSaludRepository, registroAccesoService,
+                currentUserService, accessControlService);
     }
 
     @Test
@@ -81,6 +86,7 @@ class JuntaMedicaServiceTest {
         when(currentUserService.getCurrentUser()).thenReturn(currentUser);
         when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(paciente));
         when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(creador));
+        when(accessControlService.canAccessPatient(currentUser, pacienteId)).thenReturn(true);
         when(juntaMedicaRepository.save(any(JuntaMedica.class))).thenAnswer(invocation -> {
             JuntaMedica j = invocation.getArgument(0);
             j.setId(1L);
@@ -158,6 +164,7 @@ class JuntaMedicaServiceTest {
         when(currentUserService.getCurrentUser()).thenReturn(currentUser);
         when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(paciente));
         when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(creador));
+        when(accessControlService.canAccessPatient(currentUser, pacienteId)).thenReturn(true);
 
         assertThrows(BusinessRuleException.class, () -> juntaMedicaService.create(request));
     }
@@ -183,8 +190,34 @@ class JuntaMedicaServiceTest {
         when(currentUserService.getCurrentUser()).thenReturn(currentUser);
         when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(paciente));
         when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(creador));
+        when(accessControlService.canAccessPatient(currentUser, pacienteId)).thenReturn(true);
 
         assertThrows(BusinessRuleException.class, () -> juntaMedicaService.create(request));
+    }
+
+    @Test
+    void createRejectsWithoutExistingPatientAuthorization() {
+        CurrentUserService.CurrentUser currentUser = new CurrentUserService.CurrentUser(
+                2L, "doctor@test.com", "PERSONAL_SALUD", true);
+        Paciente paciente = new Paciente();
+        paciente.setId(10L);
+        PersonalSalud creador = new PersonalSalud();
+        creador.setId(5L);
+        creador.setUsuarioId(2L);
+        JuntaMedicaCreateRequest request = new JuntaMedicaCreateRequest();
+        request.setPacienteId(10L);
+        request.setMotivo("Evaluación");
+        request.setFechaInicio(OffsetDateTime.now().plusHours(1));
+        request.setFechaExpiracion(OffsetDateTime.now().plusDays(1));
+
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(pacienteRepository.findById(10L)).thenReturn(Optional.of(paciente));
+        when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(creador));
+        when(accessControlService.canAccessPatient(currentUser, 10L)).thenReturn(false);
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> juntaMedicaService.create(request));
+        verify(juntaMedicaRepository, org.mockito.Mockito.never()).save(any(JuntaMedica.class));
     }
 
     @Test

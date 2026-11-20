@@ -41,6 +41,19 @@ public class RecordatorioMedicamentoService {
         return recordatorioMedicamentoRepository.findById(id);
     }
 
+    public Long findPacienteIdById(Long id) {
+        return recordatorioMedicamentoRepository.findById(id)
+                .map(RecordatorioMedicamento::getMedicamentoId)
+                .map(this::findPacienteIdByMedicamentoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Recordatorio no encontrado"));
+    }
+
+    public Long findPacienteIdByMedicamentoId(Long medicamentoId) {
+        return medicamentoRepository.findById(medicamentoId)
+                .map(Medicamento::getPacienteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medicamento no encontrado"));
+    }
+
     public List<RecordatorioMedicamento> findByMedicamentoId(Long medicamentoId) {
         validateMedicamento(medicamentoId);
         

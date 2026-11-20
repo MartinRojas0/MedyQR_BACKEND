@@ -23,13 +23,13 @@ public class JuntaMedicaController {
     }
 
     @GetMapping("/paciente/{pacienteId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #pacienteId)")
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #p0)")
     public List<JuntaMedicaResponse> getByPacienteId(@PathVariable Long pacienteId) {
         return juntaMedicaService.findByPacienteId(pacienteId);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #junta.pacienteId)")
+    @PreAuthorize("@accessControl.canAccessJunta(@currentUserService.getCurrentUser(), #p0)")
     public ResponseEntity<JuntaMedicaResponse> getById(@PathVariable Long id) {
         return juntaMedicaService.findById(id)
                 .map(ResponseEntity::ok)
@@ -44,7 +44,7 @@ public class JuntaMedicaController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #junta.pacienteId)")
+    @PreAuthorize("@accessControl.canAccessJunta(@currentUserService.getCurrentUser(), #p0)")
     public ResponseEntity<JuntaMedicaResponse> update(@PathVariable Long id,
                                                        @Valid @RequestBody JuntaMedicaUpdateRequest request) {
         JuntaMedicaResponse updated = juntaMedicaService.update(id, request);

@@ -33,7 +33,7 @@ public class RegistroAccesoController {
     }
 
     @GetMapping("/paciente/{pacienteId}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #pacienteId)")
+    @PreAuthorize("@accessControl.canAccessPatient(@currentUserService.getCurrentUser(), #p0)")
     public List<RegistroAcceso> getByPacienteId(@PathVariable Long pacienteId) {
         return registroAccesoService.findByPacienteId(pacienteId);
     }
@@ -51,7 +51,6 @@ public class RegistroAccesoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@accessControl.canAccessPatient(authentication, #registro.pacienteId)")
     public ResponseEntity<RegistroAcceso> getById(@PathVariable Long id) {
         var currentUser = currentUserService.getCurrentUser();
         if (currentUser == null) {
