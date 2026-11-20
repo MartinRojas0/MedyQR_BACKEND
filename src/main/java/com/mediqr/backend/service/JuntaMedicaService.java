@@ -1,5 +1,6 @@
 package com.mediqr.backend.service;
 
+import com.mediqr.backend.authorization.domain.AccessControlService;
 import com.mediqr.backend.dto.JuntaMedicaCreateRequest;
 import com.mediqr.backend.dto.JuntaMedicaResponse;
 import com.mediqr.backend.dto.JuntaMedicaUpdateRequest;
@@ -15,6 +16,7 @@ import com.mediqr.backend.security.CurrentUserService;
 import com.mediqr.backend.service.RegistroAccesoService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -30,17 +32,20 @@ public class JuntaMedicaService {
     private final PersonalSaludRepository personalSaludRepository;
     private final RegistroAccesoService registroAccesoService;
     private final CurrentUserService currentUserService;
+    private final AccessControlService accessControlService;
 
     public JuntaMedicaService(JuntaMedicaRepository juntaMedicaRepository,
                               PacienteRepository pacienteRepository,
                               PersonalSaludRepository personalSaludRepository,
                               RegistroAccesoService registroAccesoService,
-                              CurrentUserService currentUserService) {
+                              CurrentUserService currentUserService,
+                              AccessControlService accessControlService) {
         this.juntaMedicaRepository = juntaMedicaRepository;
         this.pacienteRepository = pacienteRepository;
         this.personalSaludRepository = personalSaludRepository;
         this.registroAccesoService = registroAccesoService;
         this.currentUserService = currentUserService;
+        this.accessControlService = accessControlService;
     }
 
     public List<JuntaMedicaResponse> findByPacienteId(Long pacienteId) {
@@ -79,6 +84,10 @@ public class JuntaMedicaService {
         // Get the creator's PersonalSalud
         PersonalSalud creador = personalSaludRepository.findByUsuarioId(currentUser.userId())
                 .orElseThrow(() -> new ResourceNotFoundException("Profesional de salud no encontrado para el usuario autenticado"));
+
+        if (!accessControlService.canAccessPatient(currentUser, paciente.getId())) {
+            throw new AccessDeniedException("El paciente no ha autorizado al profesional para crear una junta médica");
+        }
 
         // Validate dates
         if (request.getFechaInicio().isAfter(request.getFechaExpiracion())) {

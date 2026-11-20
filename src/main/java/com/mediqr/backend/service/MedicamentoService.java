@@ -41,6 +41,12 @@ public class MedicamentoService {
         return medicamentoRepository.findById(id);
     }
 
+    public Long findPacienteIdById(Long id) {
+        return medicamentoRepository.findById(id)
+                .map(Medicamento::getPacienteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medicamento no encontrado"));
+    }
+
     public List<Medicamento> findByPacienteId(Long pacienteId) {
         validatePatient(pacienteId);
         

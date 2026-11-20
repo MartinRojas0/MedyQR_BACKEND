@@ -2,6 +2,7 @@ package com.mediqr.backend.service;
 
 import com.mediqr.backend.dto.ParticipanteJuntaCreateRequest;
 import com.mediqr.backend.dto.ParticipanteJuntaResponse;
+import com.mediqr.backend.repository.AutorizacionPacienteRepository;
 import com.mediqr.backend.exception.BusinessRuleException;
 import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.JuntaMedica;
@@ -14,6 +15,7 @@ import com.mediqr.backend.security.CurrentUserService;
 import com.mediqr.backend.service.RegistroAccesoService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -29,17 +31,20 @@ public class ParticipanteJuntaService {
     private final PersonalSaludRepository personalSaludRepository;
     private final RegistroAccesoService registroAccesoService;
     private final CurrentUserService currentUserService;
+    private final AutorizacionPacienteRepository autorizacionPacienteRepository;
 
     public ParticipanteJuntaService(ParticipanteJuntaRepository participanteJuntaRepository,
                                     JuntaMedicaRepository juntaMedicaRepository,
                                     PersonalSaludRepository personalSaludRepository,
                                     RegistroAccesoService registroAccesoService,
-                                    CurrentUserService currentUserService) {
+                                    CurrentUserService currentUserService,
+                                    AutorizacionPacienteRepository autorizacionPacienteRepository) {
         this.participanteJuntaRepository = participanteJuntaRepository;
         this.juntaMedicaRepository = juntaMedicaRepository;
         this.personalSaludRepository = personalSaludRepository;
         this.registroAccesoService = registroAccesoService;
         this.currentUserService = currentUserService;
+        this.autorizacionPacienteRepository = autorizacionPacienteRepository;
     }
 
     public List<ParticipanteJuntaResponse> findByJuntaId(Long juntaId) {
@@ -86,6 +91,9 @@ public class ParticipanteJuntaService {
         // Validate participant exists
         PersonalSalud participante = personalSaludRepository.findById(request.getPersonalId())
                 .orElseThrow(() -> new ResourceNotFoundException("Profesional de salud no encontrado"));
+        if (!Boolean.TRUE.equals(participante.getActivo())) {
+            throw new AccessDeniedException("No se puede agregar un perfil profesional inactivo");
+        }
 
         // Check if already a participant
         if (participanteJuntaRepository.existsByJuntaIdAndPersonalId(juntaId, request.getPersonalId())) {
@@ -95,6 +103,11 @@ public class ParticipanteJuntaService {
         // Cannot add the creator as a participant (they're already the creator)
         if (junta.getCreadorId().equals(request.getPersonalId())) {
             throw new BusinessRuleException("El creador de la junta ya está implícitamente incluido");
+        }
+
+        if (!autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(
+                junta.getPacienteId(), participante.getId(), "ACTIVA")) {
+            throw new AccessDeniedException("El paciente debe autorizar al profesional antes de agregarlo a la junta");
         }
 
         ParticipanteJunta participanteJunta = new ParticipanteJunta();

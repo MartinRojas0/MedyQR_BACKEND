@@ -2,17 +2,25 @@ package com.mediqr.backend.service;
 
 import com.mediqr.backend.dto.PacienteCreateRequest;
 import com.mediqr.backend.dto.PacienteUpdateRequest;
+import com.mediqr.backend.dto.EmergencyContactUpdateRequest;
 import com.mediqr.backend.exception.BusinessRuleException;
 import com.mediqr.backend.exception.ResourceNotFoundException;
 import com.mediqr.backend.model.Paciente;
+import com.mediqr.backend.model.PersonalSalud;
 import com.mediqr.backend.model.Usuario;
+import com.mediqr.backend.repository.AutorizacionPacienteRepository;
 import com.mediqr.backend.repository.PacienteRepository;
+import com.mediqr.backend.repository.PersonalSaludRepository;
 import com.mediqr.backend.repository.UsuarioRepository;
 import com.mediqr.backend.security.CurrentUserService;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class PacienteService {
@@ -21,17 +29,50 @@ public class PacienteService {
     private final UsuarioRepository usuarioRepository;
     private final RegistroAccesoService registroAccesoService;
     private final CurrentUserService currentUserService;
+    private final AutorizacionPacienteRepository autorizacionPacienteRepository;
+    private final PersonalSaludRepository personalSaludRepository;
 
     public PacienteService(PacienteRepository pacienteRepository, UsuarioRepository usuarioRepository,
-                           RegistroAccesoService registroAccesoService, CurrentUserService currentUserService) {
+                           RegistroAccesoService registroAccesoService, CurrentUserService currentUserService,
+                           AutorizacionPacienteRepository autorizacionPacienteRepository,
+                           PersonalSaludRepository personalSaludRepository) {
         this.pacienteRepository = pacienteRepository;
         this.usuarioRepository = usuarioRepository;
         this.registroAccesoService = registroAccesoService;
         this.currentUserService = currentUserService;
+        this.autorizacionPacienteRepository = autorizacionPacienteRepository;
+        this.personalSaludRepository = personalSaludRepository;
     }
 
-    public List<Paciente> findAll() {
-        return pacienteRepository.findAll();
+    public List<Paciente> findAuthorizedForCurrentProfessional() {
+        CurrentUserService.CurrentUser currentUser = currentUserService.getCurrentUser();
+        if (currentUser == null || !"PERSONAL_SALUD".equals(currentUser.rol())) {
+            throw new AccessDeniedException("Solo el personal de salud puede consultar pacientes autorizados");
+        }
+
+        PersonalSalud personal = personalSaludRepository.findByUsuarioId(currentUser.userId())
+                .orElseThrow(() -> new AccessDeniedException("El profesional de salud no tiene un perfil activo"));
+        if (!Boolean.TRUE.equals(personal.getActivo())) {
+            throw new AccessDeniedException("El perfil del profesional de salud está inactivo");
+        }
+
+        Set<Long> patientIds = new LinkedHashSet<>();
+        autorizacionPacienteRepository.findByPersonalIdAndEstado(personal.getId(), "ACTIVA").stream()
+                .map(authorization -> authorization.getPacienteId())
+                .filter(id -> id != null)
+                .forEach(patientIds::add);
+        if (patientIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Paciente> authorizedPatients = new ArrayList<>();
+        pacienteRepository.findAllById(patientIds).forEach(patient -> {
+            if (Boolean.TRUE.equals(patient.getActivo())) {
+                authorizedPatients.add(patient);
+                registrarAcceso(patient.getId(), "PACIENTE", "LISTADO_AUTORIZADO");
+            }
+        });
+        return authorizedPatients;
     }
 
     public Optional<Paciente> findById(Long id) {
@@ -97,6 +138,26 @@ public class PacienteService {
         paciente.setDireccion(request.getDireccion());
         paciente.setSexo(request.getSexo());
         return pacienteRepository.save(paciente);
+    }
+
+    public Paciente updateEmergencyContact(Long usuarioId, EmergencyContactUpdateRequest request) {
+        Paciente paciente = pacienteRepository.findByUsuarioId(usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
+        paciente.setContactoEmergenciaNombre(request.nombre().trim());
+        paciente.setContactoEmergenciaParentesco(normalize(request.parentesco()));
+        paciente.setContactoEmergenciaTelefono(request.telefono().trim());
+        registrarAcceso(paciente.getId(), "PACIENTE", "ACTUALIZACION_CONTACTO_EMERGENCIA");
+        return pacienteRepository.save(paciente);
+    }
+
+    public void clearEmergencyContact(Long usuarioId) {
+        Paciente paciente = pacienteRepository.findByUsuarioId(usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
+        paciente.setContactoEmergenciaNombre(null);
+        paciente.setContactoEmergenciaParentesco(null);
+        paciente.setContactoEmergenciaTelefono(null);
+        registrarAcceso(paciente.getId(), "PACIENTE", "ELIMINACION_CONTACTO_EMERGENCIA");
+        pacienteRepository.save(paciente);
     }
 
     public void deleteById(Long id) {

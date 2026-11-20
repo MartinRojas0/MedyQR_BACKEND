@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -47,14 +48,32 @@ public class UsuarioService {
         return usuarioRepository.findByEmailIgnoreCase(email);
     }
 
+    public Optional<Usuario> findByLoginIdentifier(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            return Optional.empty();
+        }
+
+        String normalized = identifier.trim();
+        if (normalized.indexOf('@') >= 0) {
+            return findByEmail(normalized);
+        }
+        return usuarioRepository.findByUsernameIgnoreCase(normalized.toLowerCase(Locale.ROOT));
+    }
+
     @Transactional
     public UsuarioResponse create(UsuarioCreateRequest request) {
-        if (usuarioRepository.existsByEmailIgnoreCase(request.getEmail().trim())) {
+        String email = request.getEmail().trim();
+        String username = request.getUsername().trim().toLowerCase(Locale.ROOT);
+        if (usuarioRepository.existsByEmailIgnoreCase(email)) {
             throw new BusinessRuleException("Ya existe una cuenta con ese correo electrónico");
+        }
+        if (usuarioRepository.existsByUsernameIgnoreCase(username)) {
+            throw new BusinessRuleException("Ya existe una cuenta con ese nombre de usuario");
         }
 
         Usuario usuario = new Usuario();
-        usuario.setEmail(request.getEmail().trim());
+        usuario.setEmail(email);
+        usuario.setUsername(username);
         usuario.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         usuario.setRol("PACIENTE");
         usuario.setActivo(true);

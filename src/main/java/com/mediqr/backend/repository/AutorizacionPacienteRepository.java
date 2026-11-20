@@ -13,5 +13,7 @@ public interface AutorizacionPacienteRepository extends JpaRepository<Autorizaci
 
     List<AutorizacionPaciente> findByPersonalId(Long personalId);
 
+    List<AutorizacionPaciente> findByPersonalIdAndEstado(Long personalId, String estado);
+
     Optional<AutorizacionPaciente> findByPacienteIdAndPersonalId(Long pacienteId, Long personalId);
 }

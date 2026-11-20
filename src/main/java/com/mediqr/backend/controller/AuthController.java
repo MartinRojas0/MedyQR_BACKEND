@@ -3,6 +3,7 @@ package com.mediqr.backend.controller;
 import com.mediqr.backend.dto.AuthLoginRequest;
 import com.mediqr.backend.dto.AuthMeResponse;
 import com.mediqr.backend.dto.AuthResponse;
+import com.mediqr.backend.exception.ErrorResponse;
 import com.mediqr.backend.security.CurrentUserService;
 import com.mediqr.backend.security.JwtUtils;
 import com.mediqr.backend.security.UserDetailsImpl;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -32,9 +34,15 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthLoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+    public ResponseEntity<?> login(@Valid @RequestBody AuthLoginRequest request) {
+        final Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getIdentifier(), request.getPassword()));
+        } catch (AuthenticationException exception) {
+            return ResponseEntity.status(401).body(new ErrorResponse(
+                    401, "Unauthorized", "Correo/nombre de usuario o contraseña incorrectos", "/api/auth/login"));
+        }
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);

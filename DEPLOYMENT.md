@@ -1,10 +1,12 @@
 # Backend deployment (Render)
 
-Deploy this repository from the `feat/integracion-backend` branch using the
-included Render Blueprint (`render.yaml`). The Docker image runs Java 21 and
+The local integration work is on `feat/integracion-final`. Do not deploy it
+until review and explicit authorization. When authorized, use the included
+Render Blueprint (`render.yaml`). The Docker image runs Java 21 and
 exposes `/api/health`, which checks the PostgreSQL connection with `SELECT 1`.
-The current service is `https://mediqr-backend-tacn.onrender.com`; the frontend
-origin to permit is `https://mediqrwebfrontend-qahy.vercel.app`.
+The supplied service URL is `https://mediqr-backend-tacn.onrender.com`; the
+frontend origin to permit is `https://mediqrwebfrontend-qahy.vercel.app`. Neither
+was accessed or changed during this local integration.
 
 Configure these values as Render environment variables; do not commit them:
 
@@ -15,6 +17,7 @@ Configure these values as Render environment variables; do not commit them:
 | `DB_PASSWORD` | Database password from Neon |
 | `JWT_SECRET` | Base64-encoded random secret made from at least 32 bytes |
 | `MEDIQR_CORS_ALLOWED_ORIGINS` | Exact Vercel origin, e.g. `https://mediqrwebfrontend-qahy.vercel.app` |
+| `MEDIQR_PUBLIC_APP_URL` | Public frontend origin used by QR links, e.g. `https://mediqrwebfrontend-qahy.vercel.app` |
 
 Generate a signing secret locally in PowerShell without sharing it:
 
@@ -26,13 +29,11 @@ $rng.Dispose()
 [Convert]::ToBase64String($bytes)
 ```
 
-Keep `spring.jpa.hibernate.ddl-auto=none`. At startup, `schema.sql` uses
-`CREATE TABLE IF NOT EXISTS` for the MVP tables `usuarios`, `pacientes`,
-`historial_clinico`, and `registro_accesos`. It creates missing tables only; it
-does not alter existing tables or delete data. Hibernate does not create,
-update, or validate the broader Neon schema. Existing tables with incompatible
-columns must be reviewed separately. `/api/health` must return
-`{"status":"ok"}` before using the API.
+Keep `spring.jpa.hibernate.ddl-auto=none` and
+`spring.sql.init.mode=never`. The application does not execute `schema.sql` or
+manual migrations at startup. Provision and validate the base schema separately;
+review existing columns and constraints before applying any migration.
+`/api/health` must return `{"status":"ok"}` before using the API.
 
 On 2026-11-14, the public health endpoint returned HTTP 200 with the expected
 CORS header for the Vercel origin. Registration, JWT login, session restore
@@ -41,9 +42,37 @@ synthetic, non-medical data. The profile authorization bean-name correction
 (`@Service("accessControl")`) is included in the current branch; see the root
 [`README.md`](README.md) for the diagnosed 500 cause and verified scope.
 
-The patient MVP exposes registration, login, and the authenticated patient's
-own personal profile. The history endpoint returns `404` until a row exists;
-medical-history persistence was not included in the end-to-end verification.
-Other medical modules remain outside this deployment scope; the existing
-advanced patient-authorization workflows require a separate review before
-those modules are opened to patients.
+The integrated branch includes email-or-username login, patient-owned
+appointments, emergency-contact persistence, secure QR issuance/public
+resolution, and private document metadata/storage. It is not ready to deploy
+until all three manual migrations are reviewed and explicitly authorized for
+the target database, and durable private document storage is configured:
+
+- [`username migration`](manual-migrations/20261119_add_username.sql)
+- [`QR and emergency-contact migration`](manual-migrations/20261119_add_qr_emergency_contact.sql)
+- [`document metadata migration`](manual-migrations/20261120_add_documentos.sql)
+
+The migrations have not been run, and the current deployed Render service has
+not been verified against these local changes. The integration was tested with
+isolated H2 only; H2 compatibility mode does not establish PostgreSQL
+compatibility. Back up the database, test the scripts on a disposable
+PostgreSQL database matching the actual schema, and inspect the existing data
+before requesting production authorization. The
+included rollback scripts deliberately refuse to discard usernames, issued QR
+tokens, saved emergency contacts, or non-empty document metadata. Render's
+current free service has no persistent disk configured; do not deploy medical
+documents there until a durable, private storage target is provided.
+
+The patient API exposes registration, login, the authenticated patient's own
+personal profile and clinical history, emergency-contact operations,
+patient-owned appointment operations, QR management/public resolution, and
+private document operations. QR public responses intentionally omit patient
+identifiers, birth date, contact information, and address. Local API smoke
+checks and isolated H2 tests passed; none were run against the deployed Neon
+database.
+
+After applying approved migrations and deploying, verify `/api/health`, CORS
+from the exact Vercel origin, registration/login with synthetic accounts,
+patient-owned profile/history/contact reads and writes, QR issue/revoke/public
+resolution, and cross-patient denial. Never use Neon production for automated
+integration tests.

@@ -1,6 +1,8 @@
 package com.mediqr.backend.dto;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
 
@@ -10,9 +12,13 @@ public class CitaUpdateRequest {
     private Long personalId;
 
     @NotNull
+    @Future
     private OffsetDateTime fechaHora;
 
+    @Size(max = 255)
     private String motivo;
+
+    @Size(max = 255)
     private String observaciones;
 
     public Long getPersonalId() {

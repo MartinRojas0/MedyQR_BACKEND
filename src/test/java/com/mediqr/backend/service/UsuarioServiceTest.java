@@ -48,6 +48,7 @@ class UsuarioServiceTest {
     void createPublicRegistrationAlwaysAssignsPacienteRole() {
         UsuarioCreateRequest request = new UsuarioCreateRequest();
         request.setEmail("test@test.com");
+        request.setUsername("Patient_01");
         request.setPassword("secret123");
 
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> {
@@ -59,8 +60,12 @@ class UsuarioServiceTest {
         UsuarioResponse response = usuarioService.create(request);
 
         assertEquals("PACIENTE", response.getRol());
+        verify(usuarioRepository).existsByUsernameIgnoreCase("patient_01");
         verify(usuarioRepository).existsByEmailIgnoreCase("test@test.com");
-        verify(usuarioRepository).save(any(Usuario.class));
+        verify(usuarioRepository).save(org.mockito.ArgumentMatchers.argThat(
+                usuario -> "patient_01".equals(usuario.getUsername()) &&
+                        "test@test.com".equals(usuario.getEmail()) &&
+                        "PACIENTE".equals(usuario.getRol())));
         verify(pacienteRepository).save(org.mockito.ArgumentMatchers.argThat(
                 paciente -> Long.valueOf(1L).equals(paciente.getUsuarioId()) &&
                         "".equals(paciente.getNombres()) && "".equals(paciente.getApellidos())));
@@ -70,8 +75,24 @@ class UsuarioServiceTest {
     void createRejectsDuplicateEmailWithoutCreatingAccountOrPatient() {
         UsuarioCreateRequest request = new UsuarioCreateRequest();
         request.setEmail("test@test.com");
+        request.setUsername("patient_01");
         request.setPassword("secret123");
         when(usuarioRepository.existsByEmailIgnoreCase(request.getEmail())).thenReturn(true);
+
+        assertThrows(com.mediqr.backend.exception.BusinessRuleException.class,
+                () -> usuarioService.create(request));
+
+        verify(usuarioRepository, never()).save(any(Usuario.class));
+        verifyNoInteractions(pacienteRepository);
+    }
+
+    @Test
+    void createRejectsDuplicateUsernameWithoutCreatingAccountOrPatient() {
+        UsuarioCreateRequest request = new UsuarioCreateRequest();
+        request.setEmail("new@example.com");
+        request.setUsername("Patient_01");
+        request.setPassword("secret123");
+        when(usuarioRepository.existsByUsernameIgnoreCase("patient_01")).thenReturn(true);
 
         assertThrows(com.mediqr.backend.exception.BusinessRuleException.class,
                 () -> usuarioService.create(request));
@@ -121,6 +142,7 @@ class UsuarioServiceTest {
     void createIgnoresClientProvidedRole() {
         UsuarioCreateRequest request = new UsuarioCreateRequest();
         request.setEmail("test@test.com");
+        request.setUsername("patient_01");
         request.setPassword("secret123");
         // Cliente intenta enviar rol PERSONAL_SALUD - debería ser ignorado
         // (el DTO ya no tiene campo rol, pero verificamos que el servicio lo fuerza a PACIENTE)
@@ -135,5 +157,17 @@ class UsuarioServiceTest {
 
         assertEquals("PACIENTE", response.getRol());
         verify(pacienteRepository).save(any(Paciente.class));
+    }
+
+    @Test
+    void loginIdentifierResolvesEmailAndCaseInsensitiveUsername() {
+        Usuario account = new Usuario();
+        account.setEmail("Canonical@Example.com");
+        account.setUsername("patient_01");
+        when(usuarioRepository.findByEmailIgnoreCase("Canonical@Example.com")).thenReturn(Optional.of(account));
+        when(usuarioRepository.findByUsernameIgnoreCase("patient_01")).thenReturn(Optional.of(account));
+
+        assertEquals(account, usuarioService.findByLoginIdentifier(" Canonical@Example.com ").orElseThrow());
+        assertEquals(account, usuarioService.findByLoginIdentifier("  PATIENT_01 ").orElseThrow());
     }
 }

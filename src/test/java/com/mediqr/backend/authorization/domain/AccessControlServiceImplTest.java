@@ -93,13 +93,26 @@ class AccessControlServiceImplTest {
         when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(personal));
         when(autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(10L, 5L, "ACTIVA"))
                 .thenReturn(true);
-        when(juntaMedicaRepository.existsActiveByPacienteIdAndParticipante(10L, 5L)).thenReturn(false);
 
         assertTrue(accessControlService.canAccessPatient(currentUser, 10L));
     }
 
     @Test
-    void personalSaludWithActiveJuntaMedicaCanAccess() {
+    void inactivePersonalSaludCannotAccessDespiteActiveAuthorization() {
+        CurrentUserService.CurrentUser currentUser = new CurrentUserService.CurrentUser(
+                2L, "doctor@test.com", "PERSONAL_SALUD", true);
+        PersonalSalud personal = new PersonalSalud();
+        personal.setId(5L);
+        personal.setUsuarioId(2L);
+        personal.setActivo(false);
+
+        when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(personal));
+
+        assertFalse(accessControlService.canAccessPatient(currentUser, 10L));
+    }
+
+    @Test
+    void juntaParticipationWithoutActivePatientAuthorizationCannotAccess() {
         CurrentUserService.CurrentUser currentUser = new CurrentUserService.CurrentUser(
                 2L, "doctor@test.com", "PERSONAL_SALUD", true);
 
@@ -110,9 +123,7 @@ class AccessControlServiceImplTest {
         when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(personal));
         when(autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(10L, 5L, "ACTIVA"))
                 .thenReturn(false);
-        when(juntaMedicaRepository.existsActiveByPacienteIdAndParticipante(10L, 5L)).thenReturn(true);
-
-        assertTrue(accessControlService.canAccessPatient(currentUser, 10L));
+        assertFalse(accessControlService.canAccessPatient(currentUser, 10L));
     }
 
     @Test
@@ -127,7 +138,6 @@ class AccessControlServiceImplTest {
         when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(personal));
         when(autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(10L, 5L, "ACTIVA"))
                 .thenReturn(false);
-        when(juntaMedicaRepository.existsActiveByPacienteIdAndParticipante(10L, 5L)).thenReturn(false);
 
         assertFalse(accessControlService.canAccessPatient(currentUser, 10L));
     }
@@ -144,7 +154,6 @@ class AccessControlServiceImplTest {
         when(personalSaludRepository.findByUsuarioId(2L)).thenReturn(Optional.of(personal));
         when(autorizacionPacienteRepository.existsByPacienteIdAndPersonalIdAndEstado(10L, 5L, "ACTIVA"))
                 .thenReturn(false);
-        when(juntaMedicaRepository.existsActiveByPacienteIdAndParticipante(10L, 5L)).thenReturn(false);
 
         assertFalse(accessControlService.canAccessPatient(currentUser, 10L));
     }
@@ -162,6 +171,14 @@ class AccessControlServiceImplTest {
     @Test
     void nullCurrentUserDenied() {
         assertFalse(accessControlService.canAccessPatient(null, 10L));
+    }
+
+    @Test
+    void inactiveCurrentUserDenied() {
+        CurrentUserService.CurrentUser currentUser = new CurrentUserService.CurrentUser(
+                1L, "patient@test.com", "PACIENTE", false);
+
+        assertFalse(accessControlService.canAccessPatient(currentUser, 10L));
     }
 
     @Test

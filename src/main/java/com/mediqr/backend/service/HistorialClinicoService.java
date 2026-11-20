@@ -40,6 +40,12 @@ public class HistorialClinicoService {
         return historialClinicoRepository.findById(id);
     }
 
+    public Long findPacienteIdById(Long id) {
+        return historialClinicoRepository.findById(id)
+                .map(HistorialClinico::getPacienteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Historial clínico no encontrado"));
+    }
+
     public Optional<HistorialClinico> findByPacienteId(Long pacienteId) {
         Optional<HistorialClinico> historial = historialClinicoRepository.findByPacienteId(pacienteId);
         historial.ifPresent(h -> registrarAcceso(h.getPacienteId(), "HISTORIAL_CLINICO", "LECTURA_HISTORIAL"));

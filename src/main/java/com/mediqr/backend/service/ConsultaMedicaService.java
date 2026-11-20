@@ -43,6 +43,12 @@ public class ConsultaMedicaService {
         return consultaMedicaRepository.findById(id);
     }
 
+    public Long findPacienteIdById(Long id) {
+        return consultaMedicaRepository.findById(id)
+                .map(ConsultaMedica::getPacienteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Consulta médica no encontrada"));
+    }
+
     public ConsultaMedica getById(Long id) {
         ConsultaMedica consulta = consultaMedicaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Consulta médica no encontrada"));

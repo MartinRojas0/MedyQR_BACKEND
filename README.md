@@ -4,32 +4,24 @@ API REST de MediQR, desarrollada con Java 21 y Spring Boot 4.1.1. La rama de
 entrega es `feat/integracion-backend`; la base PostgreSQL de producción está
 alojada en Neon y el servicio se publica en Render.
 
-## Alcance verificado
+## Alcance verificado localmente
 
-Comprobado el 2026-11-14 con una cuenta y datos sintéticos, sin información
-médica real:
+La rama `feat/integracion-final` integra APIs autenticadas de perfil, historial,
+contacto de emergencia, QR, documentos privados y citas. Las cuentas nuevas se
+registran como `PACIENTE`; las operaciones de personal de salud mantienen sus
+controles de rol y autorización.
 
-- `POST /api/usuarios`: registro y creación automática del perfil PACIENTE.
-- `POST /api/auth/login` y `GET /api/auth/me`: login JWT y validación de sesión.
-- `GET /api/pacientes/me` y `PUT /api/pacientes/{id}`: lectura y actualización
-  del perfil propio; el cambio volvió a leerse desde el backend después de
-  recargar la aplicación.
-- `GET /api/health`: HTTP 200; ejecuta `SELECT 1` contra la base configurada.
-- CORS permite el origen HTTPS de Vercel configurado en Render.
+- `.\mvnw.cmd -B -ntp test`: 135 pruebas pasaron con H2.
+- El backend arrancó con el perfil `demo`; `/api/health` respondió `{"status":"ok"}`.
+- En H2 local se verificaron login por usuario/correo, persistencia de perfil e
+  historial, aislamiento (lectura cruzada 403), QR/PNG/ficha pública mínima/
+  revocación y subida/listado/descarga/eliminación de documentos.
+- La prueba de integración de citas cubre registro, consulta, reprogramación,
+  cancelación, disponibilidad, aislamiento y persistencia tras nuevo login.
 
-La suite automatizada cubre reglas unitarias y carga del contexto, pero no se
-conecta a Neon. Las verificaciones de producción anteriores sí recorrieron el
-frontend, Render y los datos del perfil mediante la API.
-
-### Causa del HTTP 500 del perfil
-
-Las expresiones de seguridad de los endpoints consultan el bean SpEL
-`@accessControl`. La implementación estaba registrada con el nombre
-predeterminado de clase, por lo que Spring no podía resolver ese nombre. El
-commit `b7fa1d906c7123b7156674863cc4590796a49aea` corrigió el registro a
-`@Service("accessControl")`. Esa corrección está incluida en la rama actual y
-la actualización autenticada del perfil ya respondió correctamente en la
-prueba de producción.
+No se ejecutaron migraciones, no hubo PostgreSQL desechable disponible y no se
+verificaron ni modificaron Neon, Render o Vercel. H2 no sustituye una validación
+de compatibilidad con PostgreSQL.
 
 ## Arquitectura
 
@@ -48,22 +40,29 @@ La inicialización SQL existente usa `CREATE TABLE IF NOT EXISTS`; este trabajo
 no modificó el esquema ni los datos de Neon. No ejecutar cambios de esquema sin
 aprobación.
 
-## Ejecución local
+## Ejecución local de demostración
 
-Requisitos: Java 21 y PostgreSQL accesible. En PowerShell, configura variables
-de desarrollo en la sesión actual (no uses valores de producción):
+Requisitos: Java 21 o superior. El perfil `demo` usa H2 en archivo
+(`data/mediqr-demo`) y almacenamiento local en `data/documents`; no requiere
+PostgreSQL ni conecta a Neon. En PowerShell, desde la raíz de este repositorio:
 
 ```powershell
-$env:DB_URL = 'jdbc:postgresql://localhost:5432/mediqr'
-$env:DB_USERNAME = '<usuario-local>'
-$env:DB_PASSWORD = '<password-local>'
-$env:JWT_SECRET = '<secreto-local-base64-de-32-bytes-o-mas>'
-$env:MEDIQR_CORS_ALLOWED_ORIGINS = 'http://localhost:8000'
-.\mvnw.cmd spring-boot:run
+$bytes = New-Object byte[] 32
+$rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($bytes)
+$rng.Dispose()
+$env:MEDIQR_DEMO_JWT_SECRET = [Convert]::ToBase64String($bytes)
+$env:SPRING_PROFILES_ACTIVE = 'demo'
+$env:SERVER_PORT = '8081'
+$env:MEDIQR_CORS_ALLOWED_ORIGINS = 'http://127.0.0.1:8810,http://localhost:8810'
+.\mvnw.cmd -Plocal-demo spring-boot:run
 ```
 
-La API local escucha en `http://localhost:8080`; verifica
-`http://localhost:8080/api/health`.
+La API local escucha en `http://127.0.0.1:8081`; verifica
+`http://127.0.0.1:8081/api/health`. Para el frontend, compila con
+`MEDIQR_API_URL=http://127.0.0.1:8081/api` y sirve `dist/` por HTTP en el
+origen permitido. Los archivos H2 y documentos están bajo `data/`, ignorado
+por Git; no compartas esos archivos.
 
 ## Variables de entorno
 
@@ -72,12 +71,14 @@ Render o en el entorno local:
 
 | Variable | Uso |
 |---|---|
-| `DB_URL` | URL JDBC PostgreSQL de Neon o de desarrollo |
-| `DB_USERNAME` | Usuario PostgreSQL |
-| `DB_PASSWORD` | Contraseña PostgreSQL |
-| `JWT_SECRET` | Secreto Base64 para firmar tokens JWT |
+| `DB_URL` | URL JDBC PostgreSQL del perfil normal |
+| `DB_USERNAME` | Usuario PostgreSQL del perfil normal |
+| `DB_PASSWORD` | Contraseña PostgreSQL del perfil normal |
+| `JWT_SECRET` | Secreto Base64 JWT del perfil normal |
+| `MEDIQR_DEMO_JWT_SECRET` | Secreto Base64 JWT requerido por el perfil local `demo` |
+| `MEDIQR_DOCUMENT_STORAGE_DIR` | Ruta local privada de documentos; obligatoria fuera del perfil demo |
 | `MEDIQR_CORS_ALLOWED_ORIGINS` | Orígenes web permitidos, separados por coma |
-| `PORT` | Puerto asignado por Render; localmente usa `8080` por defecto |
+| `PORT` / `SERVER_PORT` | Puerto Render / puerto local de Spring Boot |
 
 Render despliega desde `feat/integracion-backend` con el `Dockerfile` y
 `render.yaml`. La guía de despliegue y el formato de `JWT_SECRET` están en
@@ -90,33 +91,27 @@ Render despliega desde `feat/integracion-backend` con el `Dockerfile` y
 .\mvnw.cmd package
 ```
 
-La prueba `contextLoads` necesita un `DB_URL` con formato JDBC y un secreto JWT
-de prueba. Ejecuta las pruebas con valores descartables y sin Neon:
+La suite automatizada usa H2 de pruebas aislada y no necesita PostgreSQL ni
+credenciales de Neon:
 
 ```powershell
-$env:DB_URL = 'jdbc:postgresql://127.0.0.1:5432/mediqr_test'
-$env:DB_USERNAME = 'test'
-$env:DB_PASSWORD = 'test'
-$bytes = New-Object byte[] 32
-$rng = [Security.Cryptography.RandomNumberGenerator]::Create()
-$rng.GetBytes($bytes)
-$rng.Dispose()
-$env:JWT_SECRET = [Convert]::ToBase64String($bytes)
-$env:SPRING_SQL_INIT_MODE = 'never'
-$env:SPRING_JPA_DATABASE_PLATFORM = 'org.hibernate.dialect.PostgreSQLDialect'
-.\mvnw.cmd test
+.\mvnw.cmd -B -ntp test
 ```
 
-La suite automatizada no necesita datos ni credenciales de Neon. No conectes
-las pruebas locales a la base de producción.
+Este resultado no es una prueba de compatibilidad real con PostgreSQL.
 
-## Funcionalidades pendientes
+## Pendientes antes de publicar
 
-- Recuperación y cambio de contraseña desde el portal.
-- Persistencia de citas, documentos, medicamentos, alertas y notificaciones.
-- Historial clínico automático: una cuenta nueva puede recibir `404` en
-  `/api/historial-clinico/me` hasta que exista una fila.
-- Revisión y pruebas de producción de módulos médicos avanzados y del QR.
-- Renovación de sesión; el JWT actual tiene una expiración configurada.
+- Probar las migraciones manuales en una base PostgreSQL desechable y revisar su
+  rollback; PostgreSQL, Docker y `psql` no estaban disponibles en el entorno.
+- Configurar y probar almacenamiento privado persistente para documentos. La
+  ruta local no es durable en Render y `render.yaml` no crea un disco.
+- Revisar los cambios y obtener autorización antes de aplicar migraciones o
+  desplegar. No se modificaron Neon, Render ni Vercel.
+- La H2 de demostración no incluye personal de salud; la reserva real de citas
+  necesita profesionales activos y horarios disponibles.
+- Cambio/recuperación de contraseña y renovación de sesión no están implementados.
+- Una cuenta nueva puede no tener fila de historial hasta que guarde su primer
+  registro; el endpoint puede devolver `404` antes de eso.
 
 El MVP no debe usarse con información médica real ni para decisiones clínicas.
